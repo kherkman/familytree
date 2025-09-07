@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Tree Maker</title>
+    <!-- dom-to-image for Save to JPG functionality -->
+    <script src="https://cdn.jsdelivr.net/npm/dom-to-image@2.6.0/dist/dom-to-image.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a; /* Dark background */
+            color: #f0f0f0; /* Light text */
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #ffa500; /* Orange for title */
+        }
+
+        .controls {
+            background-color: #333;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 800px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .controls input[type="text"],
+        .controls input[type="number"],
+        .controls select {
+            padding: 10px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            background-color: #444;
+            color: #f0f0f0;
+            font-size: 1em;
+            width: 180px; /* Adjust width as needed */
+        }
+
+        .controls input[type="range"] {
+            -webkit-appearance: none;
+            width: 150px;
+            height: 8px;
+            background: #555;
+            outline: none;
+            border-radius: 4px;
+        }
+
+        .controls input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #ffa500;
+            cursor: grab;
+            border: 2px solid #333;
+        }
+
+        .controls input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #ffa500;
+            cursor: grab;
+            border: 2px solid #333;
+        }
+
+        .controls input[type="text"]::placeholder,
+        .controls input[type="number"]::placeholder {
+            color: #bbb;
+        }
+
+        .controls button {
+            background-color: #ffa500; /* Orange button */
+            color: #1a1a1a;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: background-color 0.2s ease;
+        }
+
+        .controls button:hover:not(:disabled) {
+            background-color: #e69500;
+        }
+        
+        .controls button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+            color: #bbb;
+        }
+
+        .tree-container {
+            background-color: #2b2b2b;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            overflow: auto;
+            width: 90%;
+            max-width: 1000px;
+            min-height: 500px; /* Ensure some visibility */
+            position: relative; /* For tooltip positioning */
+        }
+
+        svg {
+            width: 100%;
+            height: auto;
+            min-height: 500px;
+            display: block;
+            user-select: none; /* Prevent text selection during drag */
+            transition: transform 0.3s ease-in-out; /* Smooth rotation */
+            transform-origin: center center; /* Rotate around its center */
+        }
+
+        .person-node rect {
+            fill: #444;
+            stroke: #ffa500;
+            stroke-width: 2;
+            rx: 5;
+            ry: 5;
+            transition: stroke-width 0.2s ease, stroke 0.2s ease;
+            cursor: grab; /* Indicate draggable */
+        }
+
+        .person-node.dragging rect {
+            cursor: grabbing;
+        }
+
+        .person-node.selected rect {
+            stroke: #00bfff; /* Highlight selected node with blue */
+            stroke-width: 3;
+        }
+
+        .person-node text {
+            fill: #f0f0f0;
+            font-size: 12px;
+            text-anchor: middle;
+            dominant-baseline: central;
+            pointer-events: none; /* Allow click/drag to pass to the group */
+        }
+
+        .person-node .node-image {
+            object-fit: cover; /* Cover the area */
+            stroke: #ffa500;
+            stroke-width: 1;
+            border-radius: 50%; /* Make images round */
+            pointer-events: none; /* Allow click/drag to pass to the group */
+        }
+
+        .person-line {
+            stroke: #ffa500;
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .lifeline {
+            stroke: #8a2be2; /* Purple color for lifeline */
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .year-line {
+            stroke: #777;
+            stroke-width: 1;
+            stroke-dasharray: 4 2;
+        }
+
+        .year-label {
+            fill: #f0f0f0;
+            font-size: 12px;
+            text-anchor: end;
+        }
+
+        .hidden-file-input {
+            display: none;
+        }
+
+        .tooltip {
+            position: absolute;
+            background-color: #333;
+            color: #f0f0f0;
+            padding: 8px 12px;
+            border-radius: 4px;
+            pointer-events: none; /* Allows clicks to pass through to elements below */
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            white-space: nowrap;
+            z-index: 10;
+            border: 1px solid #ffa500;
+            font-size: 13px;
+            transform: translateX(-50%); /* Center horizontally */
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        .zoom-label {
+            color: #f0f0f0;
+            font-size: 0.9em;
+            margin-left: 10px;
+            min-width: 30px; /* Ensure space for current zoom value */
+            text-align: right;
+        }
+
+        /* Message Box Styling */
+        #messageBox {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background-color: rgba(255, 255, 255, 0.1); /* Slightly transparent white */
+            color: white;
+            padding: 8px 15px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            z-index: 100;
+            pointer-events: none; /* Ensure it doesn't block interactions */
+        }
+
+        #messageBox.visible {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <h1>Family Tree Maker</h1>
+
+    <div class="controls">
+        <input type="text" id="personName" placeholder="Name" required>
+        <input type="number" id="birthYear" placeholder="Birth Year" min="1000" max="2050">
+        <input type="number" id="deathYear" placeholder="Death Year (optional)" min="1000" max="2050">
+        <select id="parent1Select">
+            <option value="">Parent 1 (None)</option>
+        </select>
+        <select id="parent2Select">
+            <option value="">Parent 2 (None)</option>
+        </select>
+        <button id="addUpdateBtn" onclick="addUpdatePerson()">Add Person</button>
+        <button onclick="exportToCsv()">Export to CSV</button>
+        <input type="file" id="importCsvFile" accept=".csv" class="hidden-file-input" onchange="importFromCsv()">
+        <button onclick="document.getElementById('importCsvFile').click()">Import from CSV</button>
+        
+        <!-- Image URL Input & Button -->
+        <input type="text" id="imageUrlInput" placeholder="Image URL">
+        <button id="linkImageBtn" onclick="linkImage()" disabled>Link Image</button>
+
+        <input type="file" id="imageFileInput" accept="image/*" class="hidden-file-input" onchange="handleImageUpload()">
+        <button id="loadImageBtn" onclick="document.getElementById('imageFileInput').click()" disabled>Load Image</button>
+        <button onclick="saveAsJpg()">Save to JPG</button>
+        
+        <label for="zoomSlider">Zoom:</label>
+        <input type="range" id="zoomSlider" min="1" max="10" value="3" step="0.5" onchange="updateZoom()" oninput="updateZoom()">
+        <span id="currentZoom" class="zoom-label">3.0x</span>
+        
+        <label for="imageSizeInput">Image Size:</label>
+        <input type="range" id="imageSizeInput" min="10" max="100" value="40" step="5" onchange="updateImageSize()" oninput="updateImageSize()">
+        <span id="currentImageSize" class="zoom-label">40px</span>
+
+        <button onclick="toggleLifelines()">Toggle Lifelines</button>
+        <button onclick="rotateTree()">Rotate Tree</button>
+        <button id="removePersonBtn" onclick="removePerson()" disabled>Remove Person</button>
+        <button onclick="loadExampleFamily()">Load Example Family</button>
+        <button onclick="clearTree()">Clear Tree</button>
+    </div>
+
+    <div class="tree-container">
+        <svg id="familyTreeSvg"></svg>
+        <div id="tooltip" class="tooltip"></div>
+    </div>
+    <div id="messageBox"></div>
+
+    <script>
+        let family = []; // Array to store person objects
+        let nextPersonId = 1;
+        let selectedPersonId = null; // Stores the ID of the currently selected person
+        let showLifelines = false; // Controls lifeline visibility
+
+        // Drag & Drop variables
+        let isDragging = false;
+        let draggedPersonId = null;
+        let initialMouseX;
+        let dragOffsetX = 0; // Stores the offset from node's left edge to mouse click point
+        let draggedSvgGroup = null; // Reference to the SVG 'g' element being dragged
+
+        // Rotation variable
+        let rotationAngle = 0; // In degrees, for CSS transform
+
+        // Configuration for SVG drawing
+        const NODE_WIDTH = 120;
+        const NODE_HEIGHT = 60;
+        let imageSize = 40; // Initial size for the person's image, now variable
+        let pixelsPerYear = 3; // Initial pixels per year, controlled by slider
+        const YEAR_LINE_INTERVAL = 20; // Every 20 years
+        const HORIZONTAL_SPACING = 30; // Horizontal space between nodes at the same approximate year level
+        let TOP_PADDING = imageSize + 10; // Space above the earliest year for images and margin (now dynamic)
+        const LIFELINE_OFFSET = 5; // Horizontal offset for the lifeline from the node's right edge
+
+        function generateId() {
+            return 'p' + (nextPersonId++);
+        }
+
+        // Show temporary message function
+        function showMessage(message) {
+            const msgBox = document.getElementById('messageBox');
+            msgBox.textContent = message;
+            msgBox.classList.add('visible');
+            setTimeout(() => {
+                msgBox.classList.remove('visible');
+            }, 3000); // Hide after 3 seconds
+        }
+
+        // Example Family Data
+        function loadExampleFamily() {
+            family = [
+                { id: 'QV', name: 'Queen Victoria', birthYear: 1819, deathYear: 1901, parent1Id: null, parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Queen_Victoria_by_Bassano.jpg/440px-Queen_Victoria_by_Bassano.jpg', x: null },
+                { id: 'PVR', name: 'Victoria, Princess Royal', birthYear: 1840, deathYear: 1901, parent1Id: 'QV', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/e/e2/Victoria_Empress_Frederick.jpg', x: null },
+                { id: 'E7', name: 'Edward VII', birthYear: 1841, deathYear: 1910, parent1Id: 'QV', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Edward_VII_of_the_United_Kingdom_-_Bain.jpg/440px-Edward_VII_of_the_United_Kingdom_-_Bain.jpg', x: null },
+                { id: 'ADH', name: 'Alice, Grand Duchess of Hesse', birthYear: 1843, deathYear: 1878, parent1Id: 'QV', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Alice_Princess_of_the_United_Kingdom%2C_Grand_Duchess_of_Hesse_and_by_Rhine_%28cropped%29.jpg/440px-Alice_Princess_of_the_United_Kingdom%2C_Grand_Duchess_of_Hesse_and_by_Rhine_%28cropped%29.jpg', x: null },
+                { id: 'ADSCG', name: 'Alfred, Duke of Saxe-Coburg and Gotha', birthYear: 1844, deathYear: 1900, parent1Id: 'QV', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Alfred%2C_Duke_of_Saxe-Coburg_and_Gotha_by_Marius_G%C3%A9za_Erd%C3%A9ly.jpg/440px-Alfred%2C_Duke_of_Saxe-Coburg_and_Gotha_by_Marius_G%C3%A9za_Erd%C3%A9ly.jpg', x: null },
+                { id: 'PHSH', name: 'Helena, Princess Christian of Schleswig-Holstein', birthYear: 1846, deathYear: 1923, parent1Id: 'QV', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Princess_Helena_%281846-1923%29.jpg/440px-Princess_Helena_%281846-1923%29.jpg', x: null },
+                { id: 'PDA', name: 'Louise, Duchess of Argyll', birthYear: 1848, deathYear: 1939, parent1Id: 'QV', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/Princess_Louise%2C_Duchess_of_Argyll.jpg/440px-Princess_Louise%2C_Duchess_of_Argyll.jpg', x: null },
+                { id: 'DCS', name: 'Arthur, Duke of Connaught and Strathearn', birthYear: 1850, deathYear: 1942, parent1Id: 'QV', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Prince_Arthur%2C_Duke_of_Connaught_and_Strathearn_%281850-1942%29.jpg/440px-Prince_Arthur%2C_Duke_of_Connaught_and_Strathearn_%281850-1942%29.jpg', x: null },
+                { id: 'DA', name: 'Leopold, Duke of Albany', birthYear: 1853, deathYear: 1884, parent1Id: 'QV', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/07/Prince_Leopold%2C_Duke_of_Albany.jpg/440px-Prince_Leopold%2C_Duke_of_Albany.jpg', x: null },
+                { id: 'PHB', name: 'Beatrice, Princess Henry of Battenberg', birthYear: 1857, deathYear: 1944, parent1Id: 'QV', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/Princess_Beatrice_%281857-1944%29.jpg/440px-Princess_Beatrice_%281857-1944%29.jpg', x: null },
+                { id: 'G5', name: 'George V', birthYear: 1865, deathYear: 1936, parent1Id: 'E7', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/King_George_V_at_the_Age_of_28.jpg/440px-King_George_V_at_the_Age_of_28.jpg', x: null },
+                { id: 'LPR', name: 'Louise, Princess Royal (daughter of E7)', birthYear: 1867, deathYear: 1931, parent1Id: 'E7', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Louise%2C_Princess_Royal.jpg/440px-Louise%2C_Princess_Royal.jpg', x: null },
+                { id: 'PVLB', name: 'Victoria, Princess Louis of Battenberg', birthYear: 1863, deathYear: 1950, parent1Id: 'ADH', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d8/Princess_Victoria_of_Hesse_and_by_Rhine.jpg/440px-Princess_Victoria_of_Hesse_and_by_Rhine.jpg', x: null },
+                { id: 'GDESA', name: 'Elizabeth, Grand Duchess Sergei Alexandrovich', birthYear: 1864, deathYear: 1918, parent1Id: 'ADH', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Grand_Duchess_Elizabeth_Feodorovna_%28ne%C3%A9_Princess_Elisabeth_of_Hesse-Darmstadt%29_by_L.M.Kruse_in_1884.jpg/440px-Grand_Duchess_Elizabeth_Feodorovna_%28ne%C3%A9_Princess_Elisabeth_of_Hesse-Darmstadt%29_by_L.M.Kruse_in_1884.jpg', x: null },
+                { id: 'AAR', name: 'Alix of Hesse, Empress Alexandra Feodorovna of Russia', birthYear: 1872, deathYear: 1918, parent1Id: 'ADH', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Empress_Alexandra_Feodorovna_%28Alix_of_Hesse%29_by_Boris_Kustodiev.jpg/440px-Empress_Alexandra_Feodorovna_%28ne%C3%A9_Princess_Elisabeth_of_Hesse-Darmstadt%29_by_L.M.Kruse_in_1884.jpg', x: null },
+                { id: 'E8', name: 'Edward VIII', birthYear: 1894, deathYear: 1972, parent1Id: 'G5', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/King_Edward_VIII_%28cropped%29.jpg/440px-King_Edward_VIII_%28cropped%29.jpg', x: null },
+                { id: 'G6', name: 'George VI', birthYear: 1895, deathYear: 1952, parent1Id: 'G5', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/King_George_VI_of_the_United_Kingdom.jpg/440px-King_George_VI_of_the_United_Kingdom_-_Bain.jpg', x: null },
+                { id: 'LM1EMB', name: 'Louis Mountbatten, 1st Earl Mountbatten of Burma', birthYear: 1900, deathYear: 1979, parent1Id: 'PVLB', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Louis_Mountbatten.jpg/440px-Louis_Mountbatten.jpg', x: null },
+                { id: 'ON', name: 'Olga Nikolaevna', birthYear: 1895, deathYear: 1918, parent1Id: 'AAR', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Grand_Duchess_Olga_Nikolaevna_of_Russia_1913.jpg/440px-Grand_Duchess_Olga_Nikolaevna_of_Russia_1913.jpg', x: null },
+                // Adding Albert, Queen Victoria's husband, and some dual-parent children for demonstration
+                { id: 'PCONSORT', name: 'Prince Albert (Consort)', birthYear: 1819, deathYear: 1861, parent1Id: null, parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Prince_Albert_by_John_Partridge.jpg/440px-Prince_Albert_by_John_Partridge.jpg', x: null },
+                { id: 'PVR_dual', name: 'Victoria, Princess Royal (dual parents)', birthYear: 1840, deathYear: 1901, parent1Id: 'QV', parent2Id: 'PCONSORT', imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/e/e2/Victoria_Empress_Frederick.jpg', x: null },
+                { id: 'E7_dual', name: 'Edward VII (dual parents)', birthYear: 1841, deathYear: 1910, parent1Id: 'QV', parent2Id: 'PCONSORT', imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Edward_VII_of_the_United_Kingdom_-_Bain.jpg/440px-Edward_VII_of_the_United_Kingdom_-_Bain.jpg', x: null },
+            ];
+            
+            // Adjust PVR and E7 in the original example to use the new dual-parent IDs
+            family = family.filter(p => p.id !== 'PVR' && p.id !== 'E7');
+
+
+            const maxIdNum = family.reduce((max, person) => {
+                const num = parseInt(person.id.substring(1));
+                return num > max ? num : max;
+            }, 0);
+            nextPersonId = maxIdNum + 1;
+
+            updateParentSelect();
+            drawFamilyTree();
+            resetFormAndSelection(); // Clear any existing selection and form
+        }
+
+        function clearTree() {
+            family = [];
+            nextPersonId = 1;
+            selectedPersonId = null;
+            updateParentSelect();
+            drawFamilyTree();
+            resetFormAndSelection();
+        }
+
+        function updateParentSelect() {
+            const parent1Select = document.getElementById('parent1Select');
+            const parent2Select = document.getElementById('parent2Select');
+            parent1Select.innerHTML = '<option value="">Parent 1 (None)</option>'; // Clear existing options
+            parent2Select.innerHTML = '<option value="">Parent 2 (None)</option>'; // Clear existing options
+
+            family.forEach(person => {
+                // Don't let a person be their own parent in the dropdown
+                if (person.id !== selectedPersonId) {
+                    const option1 = document.createElement('option');
+                    option1.value = person.id;
+                    option1.textContent = `${person.name} (${person.birthYear})`;
+                    parent1Select.appendChild(option1);
+
+                    const option2 = document.createElement('option');
+                    option2.value = person.id;
+                    option2.textContent = `${person.name} (${person.birthYear})`;
+                    parent2Select.appendChild(option2);
+                }
+            });
+
+            // If we are editing, ensure the current parents are selected
+            if (selectedPersonId) {
+                const personToEdit = family.find(p => p.id === selectedPersonId);
+                if (personToEdit) {
+                    parent1Select.value = personToEdit.parent1Id || '';
+                    parent2Select.value = personToEdit.parent2Id || '';
+                }
+            }
+        }
+
+        function addUpdatePerson() {
+            const name = document.getElementById('personName').value.trim();
+            const birthYear = parseInt(document.getElementById('birthYear').value);
+            const deathYearInput = document.getElementById('deathYear').value;
+            const deathYear = deathYearInput ? parseInt(deathYearInput) : null;
+            const parent1Id = document.getElementById('parent1Select').value || null;
+            const parent2Id = document.getElementById('parent2Select').value || null;
+
+
+            if (!name || isNaN(birthYear)) {
+                alert('Please enter a name and valid birth year.');
+                return;
+            }
+            if (deathYear && birthYear >= deathYear) {
+                alert('Birth year must be before death year.');
+                return;
+            }
+            // Check for a person being their own parent
+            if (selectedPersonId && (parent1Id === selectedPersonId || parent2Id === selectedPersonId)) {
+                alert("A person cannot be their own direct parent.");
+                return;
+            }
+            // Prevent same person selected as both parents
+            if (parent1Id && parent2Id && parent1Id === parent2Id) {
+                alert("Cannot select the same person for both Parent 1 and Parent 2.");
+                return;
+            }
+
+            // Basic check for circular parentage (single level for simplicity)
+            if (selectedPersonId) {
+                const currentPerson = family.find(p => p.id === selectedPersonId);
+                const checkCircular = (childId, potentialParentId) => {
+                    if (!potentialParentId) return false;
+                    let current = family.find(p => p.id === potentialParentId);
+                    while (current) {
+                        if (current.id === childId) return true;
+                        // For a simple check, only go up one level. A full check is more complex.
+                        if (current.parent1Id === childId || current.parent2Id === childId) return true; 
+                        
+                        // To avoid infinite loops in complex graphs, limit depth or use a visited set
+                        if (current.parent1Id) current = family.find(p => p.id === current.parent1Id);
+                        else if (current.parent2Id) current = family.find(p => p.id === current.parent2Id);
+                        else current = null; // No more parents
+                    }
+                    return false;
+                };
+
+                if (checkCircular(selectedPersonId, parent1Id) || checkCircular(selectedPersonId, parent2Id)) {
+                    alert("Circular parentage detected! Cannot set this parent.");
+                    return;
+                }
+            }
+
+
+            if (selectedPersonId) {
+                // Update existing person
+                const personToUpdate = family.find(p => p.id === selectedPersonId);
+                if (personToUpdate) {
+                    personToUpdate.name = name;
+                    personToUpdate.birthYear = birthYear;
+                    personToUpdate.deathYear = deathYear;
+                    personToUpdate.parent1Id = parent1Id;
+                    personToUpdate.parent2Id = parent2Id;
+                    // personToUpdate.x is preserved if manually set, not reset to null here
+                }
+                showMessage('Person updated successfully!');
+            } else {
+                // Add new person
+                const newPerson = {
+                    id: generateId(),
+                    name: name,
+                    birthYear: birthYear,
+                    deathYear: deathYear,
+                    parent1Id: parent1Id,
+                    parent2Id: parent2Id,
+                    imageUrl: null, // New persons start without an image
+                    x: null // Not manually positioned yet, will be auto-calculated
+                };
+                family.push(newPerson);
+                showMessage('Person added successfully!');
+            }
+
+            updateParentSelect();
+            drawFamilyTree();
+            resetFormAndSelection();
+        }
+
+        function populateFormForEdit(person) {
+            document.getElementById('personName').value = person.name;
+            document.getElementById('birthYear').value = person.birthYear;
+            document.getElementById('deathYear').value = person.deathYear || '';
+            document.getElementById('imageUrlInput').value = person.imageUrl || ''; // Populate image URL input
+            
+            updateParentSelect(); // Re-populate to exclude self and select current parents
+            document.getElementById('parent1Select').value = person.parent1Id || '';
+            document.getElementById('parent2Select').value = person.parent2Id || '';
+
+            document.getElementById('addUpdateBtn').textContent = 'Update Person';
+        }
+
+        function resetFormAndSelection() {
+            document.getElementById('personName').value = '';
+            document.getElementById('birthYear').value = '';
+            document.getElementById('deathYear').value = '';
+            document.getElementById('parent1Select').value = ''; // Clear parent 1 select
+            document.getElementById('parent2Select').value = ''; // Clear parent 2 select
+            document.getElementById('imageUrlInput').value = ''; // Clear image URL input
+            document.getElementById('addUpdateBtn').textContent = 'Add Person';
+            clearSelectionHighlight();
+            selectedPersonId = null; 
+            document.getElementById('loadImageBtn').disabled = true;
+            document.getElementById('linkImageBtn').disabled = true; // Disable link image button
+            document.getElementById('removePersonBtn').disabled = true; // Disable remove person button
+        }
+
+        function selectPerson(id) {
+            // Remove 'selected' class from previously selected node
+            clearSelectionHighlight();
+
+            selectedPersonId = id;
+
+            // Add 'selected' class to the newly selected node
+            if (selectedPersonId) {
+                const currentSelectedNode = document.querySelector(`.person-node[data-id="${selectedPersonId}"]`);
+                if (currentSelectedNode) {
+                    currentSelectedNode.classList.add('selected');
+                }
+                const person = family.find(p => p.id === selectedPersonId);
+                if (person) {
+                    populateFormForEdit(person);
+                    document.getElementById('loadImageBtn').disabled = false;
+                    document.getElementById('linkImageBtn').disabled = false; // Enable link image button
+                    document.getElementById('removePersonBtn').disabled = false; // Enable remove person button
+                }
+            } else {
+                // If selection cleared, reset form and buttons
+                document.getElementById('personName').value = '';
+                document.getElementById('birthYear').value = '';
+                document.getElementById('deathYear').value = '';
+                document.getElementById('parent1Select').value = ''; // Clear parent 1 select
+                document.getElementById('parent2Select').value = ''; // Clear parent 2 select
+                document.getElementById('imageUrlInput').value = ''; // Clear image URL input
+                document.getElementById('addUpdateBtn').textContent = 'Add Person';
+                document.getElementById('loadImageBtn').disabled = true;
+                document.getElementById('linkImageBtn').disabled = true; // Disable link image button
+                document.getElementById('removePersonBtn').disabled = true; // Disable remove person button
+            }
+            updateParentSelect(); // Update dropdown based on current selection
+        }
+
+        function clearSelectionHighlight() {
+            const prevSelectedNode = document.querySelector('.person-node.selected');
+            if (prevSelectedNode) {
+                prevSelectedNode.classList.remove('selected');
+            }
+        }
+
+        function clearSelection() {
+            selectPerson(null);
+        }
+
+        function handleImageUpload() {
+            const fileInput = document.getElementById('imageFileInput');
+            const file = fileInput.files[0];
+
+            if (!file) return;
+            if (!selectedPersonId) {
+                alert('Please select a person first.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const personToUpdate = family.find(p => p.id === selectedPersonId);
+                if (personToUpdate) {
+                    personToUpdate.imageUrl = e.target.result;
+                    document.getElementById('imageUrlInput').value = e.target.result; // Update URL input too
+                    drawFamilyTree(); // Redraw with the new image
+                    showMessage(`Image loaded for ${personToUpdate.name}.`);
+                }
+            };
+            reader.readAsDataURL(file);
+            fileInput.value = ''; // Clear file input
+        }
+
+        function linkImage() {
+            const imageUrl = document.getElementById('imageUrlInput').value.trim();
+            if (!imageUrl) {
+                alert('Please enter an image URL.');
+                return;
+            }
+            if (!selectedPersonId) {
+                alert('Please select a person first.');
+                return;
+            }
+
+            const personToUpdate = family.find(p => p.id === selectedPersonId);
+            if (personToUpdate) {
+                personToUpdate.imageUrl = imageUrl;
+                drawFamilyTree();
+                showMessage(`Image linked for ${personToUpdate.name}.`);
+            }
+        }
+
+
+        function showParentTooltip(event, personId) {
+            const person = family.find(p => p.id === personId);
+            const tooltip = document.getElementById('tooltip');
+            tooltip.classList.remove('visible'); // Hide previous tooltip if any
+
+            if (!person || (!person.parent1Id && !person.parent2Id)) {
+                return; // No parents to show
+            }
+
+            let tooltipText = [];
+            if (person.parent1Id) {
+                const parent1 = family.find(p => p.id === person.parent1Id);
+                if (parent1) tooltipText.push(`Parent 1: ${parent1.name} (${parent1.birthYear})`);
+            }
+            if (person.parent2Id) {
+                const parent2 = family.find(p => p.id === person.parent2Id);
+                if (parent2) tooltipText.push(`Parent 2: ${parent2.name} (${parent2.birthYear})`);
+            }
+            
+            if (tooltipText.length > 0) {
+                tooltip.innerHTML = tooltipText.join('<br>');
+                
+                const treeContainerRect = document.querySelector('.tree-container').getBoundingClientRect();
+                const nodeRect = event.currentTarget.getBoundingClientRect(); // The SVG 'g' element
+                
+                // Position tooltip slightly above the node, centered horizontally
+                tooltip.style.left = `${nodeRect.left - treeContainerRect.left + nodeRect.width / 2}px`;
+                tooltip.style.top = `${nodeRect.top - treeContainerRect.top - tooltip.offsetHeight - 10}px`;
+                
+                tooltip.classList.add('visible');
+            }
+        }
+
+        function hideParentTooltip() {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.classList.remove('visible');
+        }
+
+        function updateZoom() {
+            pixelsPerYear = parseFloat(document.getElementById('zoomSlider').value);
+            document.getElementById('currentZoom').textContent = `${pixelsPerYear.toFixed(1)}x`;
+            // Recalculate TOP_PADDING based on current imageSize and redraw
+            TOP_PADDING = imageSize + 10;
+            drawFamilyTree();
+        }
+
+        function updateImageSize() {
+            imageSize = parseInt(document.getElementById('imageSizeInput').value);
+            document.getElementById('currentImageSize').textContent = `${imageSize}px`;
+            // Recalculate TOP_PADDING based on current imageSize and redraw
+            TOP_PADDING = imageSize + 10;
+            drawFamilyTree();
+        }
+        
+        function toggleLifelines() {
+            showLifelines = !showLifelines;
+            drawFamilyTree();
+        }
+
+        function rotateTree() {
+            rotationAngle = (rotationAngle + 90) % 360;
+            const svg = document.getElementById('familyTreeSvg');
+            svg.style.transform = `rotate(${rotationAngle}deg)`;
+            showMessage(`Tree rotated to ${rotationAngle} degrees.`);
+            drawFamilyTree(); // Redraw to apply inverse rotation to text elements
+        }
+
+        function removePerson() {
+            if (!selectedPersonId) {
+                alert('Please select a person to remove.');
+                return;
+            }
+
+            const personToRemove = family.find(p => p.id === selectedPersonId);
+            if (!personToRemove) {
+                alert('Selected person not found.');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to remove ${personToRemove.name}? This cannot be undone.`)) {
+                return;
+            }
+
+            // Remove the person from the family array
+            family = family.filter(p => p.id !== selectedPersonId);
+
+            // Update parentIds of children of the removed person
+            family.forEach(p => {
+                if (p.parent1Id === personToRemove.id) {
+                    p.parent1Id = null; 
+                }
+                if (p.parent2Id === personToRemove.id) {
+                    p.parent2Id = null;
+                }
+            });
+
+            showMessage(`${personToRemove.name} removed.`);
+            drawFamilyTree();
+            resetFormAndSelection(); // Clear selection and form
+        }
+
+        // --- Drag and Drop Functions ---
+        const svgElement = document.getElementById('familyTreeSvg');
+        svgElement.addEventListener('mousedown', startDrag);
+        svgElement.addEventListener('mousemove', drag);
+        svgElement.addEventListener('mouseup', endDrag);
+        svgElement.addEventListener('mouseleave', endDrag); // End drag if mouse leaves SVG
+
+        function getMouseSvgCoordinates(event) {
+            const ctm = svgElement.getScreenCTM();
+            // Invert the CTM to transform screen coordinates to SVG user coordinates
+            if (ctm) {
+                const inverseCTM = ctm.inverse();
+                // Apply the inverse matrix to the clientX/Y
+                const svgPoint = svgElement.createSVGPoint();
+                svgPoint.x = event.clientX;
+                svgPoint.y = event.clientY;
+                const transformedPoint = svgPoint.matrixTransform(inverseCTM);
+                return {
+                    x: transformedPoint.x,
+                    y: transformedPoint.y
+                };
+            }
+            // Fallback if CTM is not available or inverse fails
+            return { x: event.clientX, y: event.clientY };
+        }
+
+
+        function startDrag(event) {
+            // Only drag on the person node (g element), not the background
+            const targetNode = event.target.closest('.person-node');
+            if (targetNode) {
+                isDragging = true;
+                draggedPersonId = targetNode.dataset.id;
+                draggedSvgGroup = targetNode;
+                targetNode.classList.add('dragging');
+
+                const person = family.find(p => p.id === draggedPersonId);
+                if (person) {
+                    const mouseCoords = getMouseSvgCoordinates(event);
+                    initialMouseX = mouseCoords.x;
+                    
+                    // Get the current translation X from the SVG group's transform attribute
+                    const transform = draggedSvgGroup.getAttribute('transform');
+                    const match = transform.match(/translate\(([^,]+)/);
+                    let currentRenderedX = person.x; // Fallback to data model if parse fails
+                    if (match && match[1]) {
+                        currentRenderedX = parseFloat(match[1]);
+                    }
+                    
+                    // Calculate the offset from the node's current rendered X position to the mouse X position
+                    dragOffsetX = initialMouseX - currentRenderedX;
+                }
+            }
+        }
+
+        function drag(event) {
+            if (!isDragging || !draggedPersonId) return;
+            event.preventDefault(); // Prevent text selection etc.
+
+            const mouseCoords = getMouseSvgCoordinates(event);
+            // New person X is current mouse X minus the initial offset
+            const newX = mouseCoords.x - dragOffsetX; 
+
+            const person = family.find(p => p.id === draggedPersonId);
+            if (person) {
+                person.x = newX;
+                drawFamilyTree(); // Redraw to update the lines dynamically
+                // Re-apply dragging and selected class after redraw, as SVG elements are replaced
+                const reDraggedNode = document.querySelector(`.person-node[data-id="${draggedPersonId}"]`);
+                if (reDraggedNode) {
+                    reDraggedNode.classList.add('dragging');
+                    if (selectedPersonId === draggedPersonId) {
+                        reDraggedNode.classList.add('selected');
+                    }
+                }
+            }
+        }
+
+        function endDrag() {
+            if (isDragging) {
+                if (draggedSvgGroup) {
+                    draggedSvgGroup.classList.remove('dragging');
+                }
+                isDragging = false;
+                draggedPersonId = null;
+                draggedSvgGroup = null;
+            }
+        }
+        // --- End Drag and Drop Functions ---
+
+
+        function drawFamilyTree() {
+            const svg = document.getElementById('familyTreeSvg');
+            svg.innerHTML = ''; // Clear existing SVG content
+
+            if (family.length === 0) {
+                return;
+            }
+
+            // Calculate min/max years for vertical scaling and year lines
+            let minYear = Math.min(...family.map(p => p.birthYear));
+            let maxYear = Math.max(...family.map(p => p.deathYear || new Date().getFullYear()));
+            minYear = Math.floor(minYear / YEAR_LINE_INTERVAL) * YEAR_LINE_INTERVAL; // Round down to nearest interval
+            maxYear = Math.ceil(maxYear / YEAR_LINE_INTERVAL) * YEAR_LINE_INTERVAL;   // Round up to nearest interval
+
+            const totalHeight = (maxYear - minYear) * pixelsPerYear + TOP_PADDING + NODE_HEIGHT + 50; // Add padding for bottom
+            const svgContainerWidth = svg.parentElement.offsetWidth - 40; // Parent width minus padding
+            
+            // Create a map for easy lookup and to hold layout properties
+            const peopleMap = new Map(family.map(p => [p.id, { ...p, children: [], y: 0, level: 0 }]));
+
+            // Build child references (a person can have two parents)
+            family.forEach(person => {
+                if (person.parent1Id && peopleMap.has(person.parent1Id)) {
+                    peopleMap.get(person.parent1Id).children.push(peopleMap.get(person.id));
+                }
+                if (person.parent2Id && peopleMap.has(person.parent2Id)) {
+                    // Avoid adding the same child twice if both parents are in the map
+                    if (!peopleMap.get(person.parent1Id) || peopleMap.get(person.parent1Id).children.indexOf(peopleMap.get(person.id)) === -1) {
+                         peopleMap.get(person.parent2Id).children.push(peopleMap.get(person.id));
+                    }
+                }
+            });
+
+            // Find root nodes (no parents in the current family)
+            const rootNodes = Array.from(peopleMap.values()).filter(p => !p.parent1Id && !p.parent2Id);
+            rootNodes.sort((a, b) => a.birthYear - b.birthYear); // Sort by birth year to keep older ones higher
+
+
+            // Layout algorithm:
+            // 1. Assign levels (generations)
+            function assignLevel(person, level) {
+                person.level = level;
+                person.children.forEach(child => assignLevel(child, level + 1));
+            }
+            rootNodes.forEach(node => assignLevel(node, 0));
+
+            // 2. Assign Y positions (top of the node aligns with birth year)
+            // 3. Assign X positions, respecting manually set `person.x` or calculating if `null`.
+            const xPositionsByLevel = {}; // Tracks the next available X position for each level if auto-calculating
+
+            function assignXPositions(person) {
+                // Y position: top of the node aligns with birth year
+                person.y = (person.birthYear - minYear) * pixelsPerYear + TOP_PADDING;
+
+                if (person.x !== null) {
+                    // If person.x is already set (e.g., by dragging or import), use it.
+                    // Recursively position children based on their own rules
+                    person.children.sort((a, b) => a.birthYear - b.birthYear);
+                    person.children.forEach(child => assignXPositions(child));
+                } else {
+                    // Auto-calculate X position if not manually set
+                    if (person.children.length === 0) {
+                        // Leaf node: place at the next available X for its level
+                        if (!xPositionsByLevel[person.level]) xPositionsByLevel[person.level] = 50; // Initial margin
+                        
+                        person.x = xPositionsByLevel[person.level];
+                        xPositionsByLevel[person.level] += NODE_WIDTH + HORIZONTAL_SPACING;
+                    } else if (person.parent1Id && person.parent2Id) {
+                        // Try to center between two parents if both are known and laid out
+                        const p1 = peopleMap.get(person.parent1Id);
+                        const p2 = peopleMap.get(person.parent2Id);
+
+                        if (p1 && p1.x !== null && p2 && p2.x !== null) {
+                            person.x = (p1.x + p2.x) / 2 - NODE_WIDTH / 2;
+                        } else if (p1 && p1.x !== null) {
+                            person.x = p1.x; // Fallback to parent1's x if parent2 unknown
+                        } else if (p2 && p2.x !== null) {
+                            person.x = p2.x; // Fallback to parent2's x if parent1 unknown
+                        } else {
+                            // If parents not yet laid out or not found, place sequentially
+                            if (!xPositionsByLevel[person.level]) xPositionsByLevel[person.level] = 50;
+                            person.x = xPositionsByLevel[person.level];
+                            xPositionsByLevel[person.level] += NODE_WIDTH + HORIZONTAL_SPACING;
+                        }
+                    }
+                    else if (person.parent1Id) {
+                         // Place relative to single parent
+                         const p1 = peopleMap.get(person.parent1Id);
+                         if (p1 && p1.x !== null) {
+                            person.x = p1.x; // Start under parent
+                         } else {
+                            if (!xPositionsByLevel[person.level]) xPositionsByLevel[person.level] = 50;
+                            person.x = xPositionsByLevel[person.level];
+                            xPositionsByLevel[person.level] += NODE_WIDTH + HORIZONTAL_SPACING;
+                         }
+                    } else if (person.parent2Id) { // Fallback for only parent2 set
+                         const p2 = peopleMap.get(person.parent2Id);
+                         if (p2 && p2.x !== null) {
+                            person.x = p2.x; // Start under parent
+                         } else {
+                            if (!xPositionsByLevel[person.level]) xPositionsByLevel[person.level] = 50;
+                            person.x = xPositionsByLevel[person.level];
+                            xPositionsByLevel[person.level] += NODE_WIDTH + HORIZONTAL_SPACING;
+                         }
+                    } else { // Truly a root node
+                        if (!xPositionsByLevel[person.level]) xPositionsByLevel[person.level] = 50;
+                        person.x = xPositionsByLevel[person.level];
+                        xPositionsByLevel[person.level] += NODE_WIDTH + HORIZONTAL_SPACING;
+                    }
+
+                    // Ensure horizontal spacing for auto-placed nodes at the same level
+                    if (person.x !== null) {
+                        if (!xPositionsByLevel[person.level] || person.x > xPositionsByLevel[person.level]) {
+                            xPositionsByLevel[person.level] = person.x + NODE_WIDTH + HORIZONTAL_SPACING;
+                        } else {
+                            // Adjust x if it overlaps with a previous node on the same level that was auto-placed
+                            person.x = xPositionsByLevel[person.level];
+                            xPositionsByLevel[person.level] += NODE_WIDTH + HORIZONTAL_SPACING;
+                        }
+                    }
+
+                    // Recursively position children if this person's X was just determined
+                    person.children.sort((a, b) => a.birthYear - b.birthYear);
+                    person.children.forEach(child => assignXPositions(child));
+                }
+            }
+            
+            // Execute the layout for all nodes
+            rootNodes.forEach(node => assignXPositions(node));
+
+
+            // Determine overall SVG width needed based on calculated positions
+            let maxCalculatedX = 0;
+            Array.from(peopleMap.values()).forEach(p => {
+                maxCalculatedX = Math.max(maxCalculatedX, p.x + NODE_WIDTH);
+            });
+            const finalSvgWidth = Math.max(svgContainerWidth, maxCalculatedX + 50); // Ensure enough space
+            svg.setAttribute('viewBox', `0 0 ${finalSvgWidth} ${totalHeight}`);
+            svg.setAttribute('height', totalHeight);
+
+            // Calculate the inverse rotation for text elements
+            const rotateTextTransform = `rotate(${-rotationAngle})`;
+
+
+            // Drawing year lines first
+            for (let year = minYear; year <= maxYear; year += YEAR_LINE_INTERVAL) {
+                const yPos = (year - minYear) * pixelsPerYear + TOP_PADDING;
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', 0);
+                line.setAttribute('y1', yPos);
+                line.setAttribute('x2', finalSvgWidth);
+                line.setAttribute('y2', yPos);
+                line.setAttribute('class', 'year-line');
+                svg.appendChild(line);
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                const textX = finalSvgWidth - 10;
+                const textY = yPos - 5;
+                text.setAttribute('x', textX);
+                text.setAttribute('y', textY);
+                text.setAttribute('class', 'year-label');
+                text.textContent = year;
+                // Apply inverse rotation around its own position
+                text.setAttribute('transform', `${rotateTextTransform} translate(${textX}, ${textY}) rotate(${-rotationAngle}) translate(${-textX}, ${-textY})`);
+                svg.appendChild(text);
+            }
+
+            // Draw connections (lines) first, then nodes
+            peopleMap.forEach(person => {
+                // Draw line for Parent 1
+                if (person.parent1Id && peopleMap.has(person.parent1Id)) {
+                    const parent = peopleMap.get(person.parent1Id);
+                    const parentCenterX = parent.x + NODE_WIDTH / 2;
+                    const parentBottomY = parent.y + NODE_HEIGHT;
+                    const childCenterX = person.x + NODE_WIDTH / 2;
+                    const childTopY = person.y;
+
+                    const midY = parentBottomY + (childTopY - parentBottomY) / 2;
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    let path = `M ${parentCenterX} ${parentBottomY}
+                                V ${midY}
+                                H ${childCenterX}
+                                V ${childTopY}`;
+                    line.setAttribute('d', path);
+                    line.setAttribute('class', 'person-line');
+                    svg.appendChild(line);
+                }
+
+                // Draw line for Parent 2
+                if (person.parent2Id && peopleMap.has(person.parent2Id)) {
+                    const parent = peopleMap.get(person.parent2Id);
+                    const parentCenterX = parent.x + NODE_WIDTH / 2;
+                    const parentBottomY = parent.y + NODE_HEIGHT;
+                    const childCenterX = person.x + NODE_WIDTH / 2;
+                    const childTopY = person.y;
+
+                    const midY = parentBottomY + (childTopY - parentBottomY) / 2;
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    let path = `M ${parentCenterX} ${parentBottomY}
+                                V ${midY}
+                                H ${childCenterX}
+                                V ${childTopY}`;
+                    line.setAttribute('d', path);
+                    line.setAttribute('class', 'person-line');
+                    svg.appendChild(line);
+                }
+            });
+
+            // Draw nodes
+            peopleMap.forEach(person => {
+                const nodeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                nodeGroup.setAttribute('class', `person-node ${selectedPersonId === person.id ? 'selected' : ''}`);
+                nodeGroup.setAttribute('data-id', person.id);
+                // Translate to the top-left corner of the node
+                nodeGroup.setAttribute('transform', `translate(${person.x}, ${person.y})`);
+                nodeGroup.onclick = (e) => { e.stopPropagation(); selectPerson(person.id); }; // Select on click
+                nodeGroup.onmouseover = (e) => showParentTooltip(e, person.id);
+                nodeGroup.onmouseout = hideParentTooltip;
+
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', 0);
+                rect.setAttribute('y', 0);
+                rect.setAttribute('width', NODE_WIDTH);
+                rect.setAttribute('height', NODE_HEIGHT);
+                nodeGroup.appendChild(rect);
+
+                let textYOffsetName = 15; // Y for name text, relative to node top (0)
+                let textYOffsetYears = textYOffsetName + 20; // Y for years text
+
+                if (person.imageUrl) {
+                    const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+                    image.setAttribute('href', person.imageUrl);
+                    image.setAttribute('x', (NODE_WIDTH - imageSize) / 2); // Center horizontally
+                    image.setAttribute('y', -imageSize - 5); // Position above the node rect
+                    image.setAttribute('width', imageSize);
+                    image.setAttribute('height', imageSize);
+                    image.setAttribute('class', 'node-image'); // Apply some styling
+                    nodeGroup.appendChild(image);
+                }
+
+                const nameText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                nameText.setAttribute('x', NODE_WIDTH / 2); // Center horizontally
+                nameText.setAttribute('y', textYOffsetName);
+                nameText.textContent = person.name;
+                // Apply inverse rotation around its own calculated position
+                nameText.setAttribute('transform', rotateTextTransform);
+                nodeGroup.appendChild(nameText);
+
+                const yearsText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                yearsText.setAttribute('x', NODE_WIDTH / 2); // Center horizontally
+                yearsText.setAttribute('y', textYOffsetYears); // Further down
+                yearsText.textContent = `${person.birthYear} - ${person.deathYear || 'Present'}`;
+                // Apply inverse rotation around its own calculated position
+                yearsText.setAttribute('transform', rotateTextTransform);
+                nodeGroup.appendChild(yearsText);
+
+                svg.appendChild(nodeGroup);
+
+                // Draw lifeline if enabled
+                if (showLifelines) {
+                    const lifeline = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    const lifelineX = person.x + NODE_WIDTH + LIFELINE_OFFSET;
+                    
+                    const currentOrDeathYear = person.deathYear || new Date().getFullYear();
+                    const lifelineY1 = (person.birthYear - minYear) * pixelsPerYear + TOP_PADDING;
+                    const lifelineY2 = (currentOrDeathYear - minYear) * pixelsPerYear + TOP_PADDING;
+
+                    lifeline.setAttribute('x1', lifelineX);
+                    lifeline.setAttribute('y1', lifelineY1);
+                    lifeline.setAttribute('x2', lifelineX);
+                    lifeline.setAttribute('y2', lifelineY2);
+                    lifeline.setAttribute('class', 'lifeline');
+                    svg.appendChild(lifeline);
+                }
+            });
+
+            // Click on SVG background to clear selection
+            svg.onclick = clearSelection;
+        }
+
+
+        function exportToCsv() {
+            if (family.length === 0) {
+                alert('No family data to export.');
+                return;
+            }
+
+            let csvContent = "ID,Name,BirthYear,DeathYear,Parent1ID,Parent2ID,ImageURL,XPosition\n"; // Added Parent2ID
+            family.forEach(person => {
+                const deathYear = person.deathYear !== null ? person.deathYear : '';
+                const parent1Id = person.parent1Id !== null ? person.parent1Id : '';
+                const parent2Id = person.parent2Id !== null ? person.parent2Id : ''; // New parent ID
+                const xPosition = person.x !== null ? person.x : '';
+                // Escape double quotes in name and image URL if they exist, then wrap in quotes
+                const nameEscaped = `"${person.name.replace(/"/g, '""')}"`;
+                const imageUrlEscaped = person.imageUrl ? `"${person.imageUrl.replace(/"/g, '""')}"` : '';
+                
+                csvContent += `${person.id},${nameEscaped},${person.birthYear},${deathYear},${parent1Id},${parent2Id},${imageUrlEscaped},${xPosition}\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            if (link.download !== undefined) { // Feature detection
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', 'family_tree.csv');
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+
+        function importFromCsv() {
+            const fileInput = document.getElementById('importCsvFile');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Please select a CSV file.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                const lines = content.split('\n').filter(line => line.trim() !== ''); // Filter empty lines
+
+                if (lines.length < 2) {
+                    alert('CSV file is empty or malformed.');
+                    return;
+                }
+
+                // A robust CSV parser for values that might contain commas or escaped quotes
+                const parseCsvLine = (line) => {
+                    const values = [];
+                    let inQuote = false;
+                    let currentVal = '';
+                    for (let i = 0; i < line.length; i++) {
+                        const char = line[i];
+                        if (char === '"') {
+                            if (i + 1 < line.length && line[i + 1] === '"') { // Escaped double quote
+                                currentVal += '"';
+                                i++; // Skip the next quote
+                            } else {
+                                inQuote = !inQuote;
+                            }
+                        } else if (char === ',' && !inQuote) {
+                            values.push(currentVal);
+                            currentVal = '';
+                        } else {
+                            currentVal += char;
+                        }
+                    }
+                    values.push(currentVal); // Add the last value
+                    return values.map(v => v.trim()); // Trim whitespace
+                };
+
+
+                const headers = parseCsvLine(lines[0]);
+                if (!headers.includes('ID') || !headers.includes('Name') || !headers.includes('BirthYear')) {
+                    alert('CSV must contain "ID", "Name", and "BirthYear" columns.');
+                    return;
+                }
+
+                const newFamily = [];
+                let maxIdNum = 0;
+
+                for (let i = 1; i < lines.length; i++) {
+                    const values = parseCsvLine(lines[i]);
+                    // Check if the number of values matches the number of headers
+                    // This is a basic check; robust CSV parsing for varying column counts is more complex
+                    // and might require more sophisticated libraries or error handling.
+                    if (values.length !== headers.length) {
+                         console.warn(`Skipping malformed row (column count mismatch): ${lines[i]}`);
+                         continue;
+                    }
+
+                    const person = {};
+                    headers.forEach((header, index) => {
+                        const value = values[index];
+                        if (header === 'ID') {
+                            person.id = value;
+                            const num = parseInt(value.substring(1));
+                            if (!isNaN(num)) maxIdNum = Math.max(maxIdNum, num);
+                        } else if (header === 'Name') {
+                            person.name = value;
+                        } else if (header === 'BirthYear') {
+                            person.birthYear = parseInt(value);
+                            if (isNaN(person.birthYear)) person.birthYear = null; // Mark invalid
+                        } else if (header === 'DeathYear') {
+                            person.deathYear = value ? parseInt(value) : null;
+                        } else if (header === 'Parent1ID') {
+                            person.parent1Id = value || null;
+                        } else if (header === 'Parent2ID') { // Handle Parent2ID
+                            person.parent2Id = value || null;
+                        } else if (header === 'ImageURL') {
+                            person.imageUrl = value || null;
+                        } else if (header === 'XPosition') { // Handle XPosition
+                            person.x = value ? parseFloat(value) : null;
+                        }
+                    });
+
+                    if (person.id && person.name && person.birthYear !== null && !isNaN(person.birthYear)) {
+                        newFamily.push(person);
+                    } else {
+                        console.warn('Skipping incomplete or invalid person data from CSV:', person);
+                    }
+                }
+
+                family = newFamily;
+                nextPersonId = maxIdNum + 1;
+                updateParentSelect();
+                drawFamilyTree();
+                resetFormAndSelection();
+                showMessage('Family tree imported successfully!');
+            };
+
+            reader.readAsText(file);
+            fileInput.value = ''; // Clear the file input
+        }
+
+        function saveAsJpg() {
+            const treeContainer = document.querySelector('.tree-container'); // Capture the entire container to get background, padding, etc.
+
+            if (!treeContainer || family.length === 0) {
+                alert("No tree to save or SVG element not found.");
+                return;
+            }
+
+            // Temporarily remove the selection highlight for a cleaner image
+            const selectedNode = document.querySelector('.person-node.selected');
+            if (selectedNode) selectedNode.classList.remove('selected');
+
+            // dom-to-image might have issues with SVG elements specifically (foreignObject, images etc.)
+            // The library converts a DOM node to an image. The SVG itself is part of the DOM.
+            // It generally works by rendering to canvas.
+            domtoimage.toJpeg(treeContainer, { quality: 0.95, bgcolor: '#2b2b2b' }) // Set background explicitly
+                .then(function (dataUrl) {
+                    const link = document.createElement('a');
+                    link.download = 'family_tree.jpg';
+                    link.href = dataUrl;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    showMessage('Family tree saved as JPG!');
+                })
+                .catch(function (error) {
+                    console.error('Oops, something went wrong while saving as JPG!', error);
+                    alert('Failed to save as JPG. Check console for details. (Images in SVG might cause issues)');
+                })
+                .finally(() => {
+                    // Re-apply selection highlight if it was removed
+                    if (selectedNode) selectedNode.classList.add('selected');
+                });
+        }
+
+
+        // Initial setup
+        document.addEventListener('DOMContentLoaded', () => {
+            loadExampleFamily(); // Load example family on page load
+            
+            // Set slider values and update displays
+            document.getElementById('zoomSlider').value = pixelsPerYear;
+            document.getElementById('currentZoom').textContent = `${pixelsPerYear.toFixed(1)}x`;
+            
+            document.getElementById('imageSizeInput').value = imageSize;
+            document.getElementById('currentImageSize').textContent = `${imageSize}px`;
+
+            // Update TOP_PADDING initially
+            TOP_PADDING = imageSize + 10; 
+
+            resetFormAndSelection(); // Ensure buttons are initially disabled and form is reset
+        });
+    </script>
+</body>
+</html>
