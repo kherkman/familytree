@@ -244,6 +244,128 @@
         #messageBox.visible {
             opacity: 1;
         }
+
+        /* Modal Styles */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 101; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.6); /* Black w/ opacity */
+            padding-top: 60px;
+        }
+
+        .modal-content {
+            background-color: #333;
+            margin: 5% auto; /* 5% from the top and centered */
+            padding: 30px;
+            border: 1px solid #555;
+            border-radius: 8px;
+            width: 90%; /* Could be more or less, depending on screen size */
+            max-width: 1200px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            color: #f0f0f0;
+            position: relative;
+        }
+
+        .modal-content h2 {
+            color: #ffa500;
+            margin-top: 0;
+        }
+
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            position: absolute;
+            top: 10px;
+            right: 20px;
+        }
+
+        .close-button:hover,
+        .close-button:focus {
+            color: #ffa500;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .table-container {
+            max-height: 60vh; /* Max height for scrollable table body */
+            overflow-y: auto;
+            margin-bottom: 20px;
+            border: 1px solid #555;
+            border-radius: 4px;
+        }
+
+        #familyDataTable {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+            table-layout: fixed; /* Ensures columns respect width */
+        }
+
+        #familyDataTable th, #familyDataTable td {
+            border: 1px solid #555;
+            padding: 8px;
+            text-align: left;
+            white-space: nowrap; /* Prevent wrapping by default */
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #familyDataTable th {
+            background-color: #444;
+            color: #f0f0f0;
+            position: sticky; /* Sticky headers for scrolling */
+            top: 0;
+            z-index: 1;
+        }
+
+        #familyDataTable tbody tr:nth-child(even) {
+            background-color: #3a3a3a;
+        }
+
+        #familyDataTable tbody tr:hover {
+            background-color: #4a4a4a;
+        }
+
+        #familyDataTable [contenteditable="true"] {
+            outline: 1px dashed #ffa500;
+            min-width: 50px; /* Ensure editable cells have a minimum size */
+            white-space: normal; /* Allow text to wrap within editable cells */
+            word-break: break-all; /* Break long words */
+        }
+
+        #familyDataTable td:nth-child(1) { width: 5%; } /* ID */
+        #familyDataTable td:nth-child(2) { width: 15%; } /* Name */
+        #familyDataTable td:nth-child(3),
+        #familyDataTable td:nth-child(4) { width: 8%; } /* Years */
+        #familyDataTable td:nth-child(5),
+        #familyDataTable td:nth-child(6) { width: 10%; } /* Parent IDs */
+        #familyDataTable td:nth-child(7) { width: 30%; } /* Image URL */
+        #familyDataTable td:nth-child(8) { width: 10%; } /* X Position */
+
+        .modal button {
+            background-color: #ffa500;
+            color: #1a1a1a;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: background-color 0.2s ease;
+            margin-right: 10px;
+            margin-top: 15px;
+        }
+        .modal button:hover {
+            background-color: #e69500;
+        }
     </style>
 </head>
 <body>
@@ -316,6 +438,9 @@
         <label for="bgPosYSlider">BG Pos Y:</label>
         <input type="range" id="bgPosYSlider" min="-200" max="200" value="0" step="1" onchange="updateBackgroundStyle()" oninput="updateBackgroundStyle()">
         <span id="currentBgPosY" class="zoom-label">0%</span>
+
+        <!-- New: Edit as Table Button -->
+        <button onclick="openEditTableModal()">Edit as Table</button>
     </div>
 
     <div class="tree-container">
@@ -323,6 +448,35 @@
         <div id="tooltip" class="tooltip"></div>
     </div>
     <div id="messageBox"></div>
+
+    <!-- New: Edit as Table Modal -->
+    <div id="editTableModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeEditTableModal()">&times;</span>
+            <h2>Edit Family Data</h2>
+            <div class="table-container">
+                <table id="familyDataTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Birth Year</th>
+                            <th>Death Year</th>
+                            <th>Parent 1 ID</th>
+                            <th>Parent 2 ID</th>
+                            <th>Image URL</th>
+                            <th>X Position</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Table rows will be populated here by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+            <button onclick="saveTableChanges()">Save Changes</button>
+            <button onclick="closeEditTableModal()">Close</button>
+        </div>
+    </div>
 
     <script>
         let family = []; // Array to store person objects
@@ -351,6 +505,7 @@
         const HORIZONTAL_SPACING = 30; // Horizontal space between nodes at the same approximate year level
         let TOP_PADDING = imageSize + 10; // Space above the earliest year for images and margin (now dynamic)
         const LIFELINE_OFFSET = 5; // Horizontal offset for the lifeline from the node's right edge
+        const VERTICAL_LEVEL_SPACING = 120; // Consistent vertical space between generations/levels if no years
 
         // Background image variables
         let backgroundImageUrl = null;
@@ -394,12 +549,12 @@
                 if (person.id !== selectedPersonId) {
                     const option1 = document.createElement('option');
                     option1.value = person.id;
-                    option1.textContent = `${person.name} (${person.birthYear})`;
+                    option1.textContent = `${person.name} (${person.birthYear || '?'})`;
                     parent1Select.appendChild(option1);
 
                     const option2 = document.createElement('option');
                     option2.value = person.id;
-                    option2.textContent = `${person.name} (${person.birthYear})`;
+                    option2.textContent = `${person.name} (${person.birthYear || '?'})`;
                     parent2Select.appendChild(option2);
                 }
             });
@@ -416,22 +571,31 @@
 
         function addUpdatePerson() {
             const name = document.getElementById('personName').value.trim();
-            const birthYear = parseInt(document.getElementById('birthYear').value);
+            const birthYearInput = document.getElementById('birthYear').value;
+            const birthYear = birthYearInput ? parseInt(birthYearInput) : null;
             const deathYearInput = document.getElementById('deathYear').value;
             const deathYear = deathYearInput ? parseInt(deathYearInput) : null;
             const parent1Id = document.getElementById('parent1Select').value || null;
             const parent2Id = document.getElementById('parent2Select').value || null;
 
 
-            if (!name || isNaN(birthYear)) {
-                alert('Please enter a name and valid birth year.');
+            if (!name) {
+                alert('Please enter a name.');
                 return;
             }
-            if (deathYear && birthYear >= deathYear) {
+            if (birthYearInput && isNaN(birthYear)) {
+                alert('Please enter a valid birth year or leave blank.');
+                return;
+            }
+            if (deathYearInput && isNaN(deathYear)) {
+                alert('Please enter a valid death year or leave blank.');
+                return;
+            }
+            if (birthYear !== null && deathYear !== null && birthYear >= deathYear) {
                 alert('Birth year must be before death year.');
                 return;
             }
-            // Check for a person being their own parent
+            // Check for a person being their own parent in the form
             if (selectedPersonId && (parent1Id === selectedPersonId || parent2Id === selectedPersonId)) {
                 alert("A person cannot be their own direct parent.");
                 return;
@@ -448,15 +612,19 @@
                 const checkCircular = (childId, potentialParentId) => {
                     if (!potentialParentId) return false;
                     let current = family.find(p => p.id === potentialParentId);
+                    const visited = new Set();
                     while (current) {
                         if (current.id === childId) return true;
-                        // For a simple check, only go up one level. A full check is more complex.
-                        if (current.parent1Id === childId || current.parent2Id === childId) return true; 
+                        if (visited.has(current.id)) break; // Prevent infinite loop on complex graphs
+                        visited.add(current.id);
                         
-                        // To avoid infinite loops in complex graphs, limit depth or use a visited set
-                        if (current.parent1Id) current = family.find(p => p.id === current.parent1Id);
-                        else if (current.parent2Id) current = family.find(p => p.id === current.parent2Id);
-                        else current = null; // No more parents
+                        let nextParent = null;
+                        if (current.parent1Id && !visited.has(current.parent1Id)) {
+                            nextParent = family.find(p => p.id === current.parent1Id);
+                        } else if (current.parent2Id && !visited.has(current.parent2Id)) {
+                            nextParent = family.find(p => p.id === current.parent2Id);
+                        }
+                        current = nextParent;
                     }
                     return false;
                 };
@@ -503,8 +671,8 @@
 
         function populateFormForEdit(person) {
             document.getElementById('personName').value = person.name;
-            document.getElementById('birthYear').value = person.birthYear;
-            document.getElementById('deathYear').value = person.deathYear || '';
+            document.getElementById('birthYear').value = person.birthYear === null ? '' : person.birthYear;
+            document.getElementById('deathYear').value = person.deathYear === null ? '' : person.deathYear;
             document.getElementById('imageUrlInput').value = person.imageUrl || ''; // Populate image URL input
             
             updateParentSelect(); // Re-populate to exclude self and select current parents
@@ -689,11 +857,11 @@
             let tooltipText = [];
             if (person.parent1Id) {
                 const parent1 = family.find(p => p.id === person.parent1Id);
-                if (parent1) tooltipText.push(`Parent 1: ${parent1.name} (${parent1.birthYear})`);
+                if (parent1) tooltipText.push(`Parent 1: ${parent1.name} (${parent1.birthYear || '?'})`);
             }
             if (person.parent2Id) {
                 const parent2 = family.find(p => p.id === person.parent2Id);
-                if (parent2) tooltipText.push(`Parent 2: ${parent2.name} (${parent2.birthYear})`);
+                if (parent2) tooltipText.push(`Parent 2: ${parent2.name} (${parent2.birthYear || '?'})`);
             }
             
             if (tooltipText.length > 0) {
@@ -942,11 +1110,19 @@
                 return;
             }
 
-            // Calculate min/max years for vertical scaling and year lines
-            let minYear = Math.min(...family.map(p => p.birthYear));
-            let maxYear = Math.max(...family.map(p => p.deathYear || new Date().getFullYear()));
-            minYear = Math.floor(minYear / YEAR_LINE_INTERVAL) * YEAR_LINE_INTERVAL; // Round down to nearest interval
-            maxYear = Math.ceil(maxYear / YEAR_LINE_INTERVAL) * YEAR_LINE_INTERVAL;   // Round up to nearest interval
+            // Check if any person has a valid birthYear to determine if we should draw with years
+            const hasYears = family.some(p => p.birthYear !== null && !isNaN(p.birthYear));
+
+            // Calculate min/max years for vertical scaling and year lines (only if hasYears)
+            let minYear = 0; // Default if no years
+            let maxYear = 0; // Default if no years
+            if (hasYears) {
+                minYear = Math.min(...family.filter(p => p.birthYear !== null).map(p => p.birthYear));
+                maxYear = Math.max(...family.filter(p => p.deathYear !== null).map(p => p.deathYear), new Date().getFullYear());
+                minYear = Math.floor(minYear / YEAR_LINE_INTERVAL) * YEAR_LINE_INTERVAL; // Round down to nearest interval
+                maxYear = Math.ceil(maxYear / YEAR_LINE_INTERVAL) * YEAR_LINE_INTERVAL;   // Round up to nearest interval
+            }
+            
 
             const svgContainerWidth = svg.parentElement.offsetWidth - 40; // Parent width minus padding
             
@@ -969,7 +1145,11 @@
 
             // Find root nodes (no parents in the current family)
             const rootNodes = Array.from(peopleMap.values()).filter(p => !p.parent1Id && !p.parent2Id);
-            rootNodes.sort((a, b) => a.birthYear - b.birthYear); // Sort by birth year to keep older ones higher
+            if (hasYears) {
+                rootNodes.sort((a, b) => a.birthYear - b.birthYear); // Sort by birth year to keep older ones higher
+            } else {
+                 rootNodes.sort((a, b) => a.name.localeCompare(b.name)); // Sort alphabetically if no years
+            }
 
 
             // Layout algorithm:
@@ -989,7 +1169,24 @@
 
                 const wrappedNameLines = getWrappedText(person.name, NODE_WIDTH - 20, nameFontSize); // 20px for horizontal padding
 
-                let textContentHeight = (wrappedNameLines.length * nameLineHeight) + yearsLineHeight + 5; // +5 for minor gap
+                let yearsContent = '';
+                if (hasYears) {
+                    yearsContent = `${person.birthYear} - ${person.deathYear || 'Present'}`;
+                } else {
+                    if (person.birthYear && person.deathYear) {
+                        yearsContent = `${person.birthYear} - ${person.deathYear}`;
+                    } else if (person.birthYear) {
+                        yearsContent = `Born: ${person.birthYear}`;
+                    } else if (person.deathYear) {
+                        yearsContent = `Died: ${person.deathYear}`;
+                    }
+                }
+
+                let textContentHeight = (wrappedNameLines.length * nameLineHeight);
+                if (yearsContent) { // Only add yearsLineHeight if there's actual content
+                    textContentHeight += yearsLineHeight;
+                }
+                textContentHeight += 5; // +5 for minor gap
                 
                 let calculatedHeight = textContentHeight;
                 if (person.imageUrl) {
@@ -1002,18 +1199,23 @@
             });
 
 
-            // 2. Assign Y positions (top of the node aligns with birth year)
+            // 2. Assign Y positions (top of the node aligns with birth year or level)
             // 3. Assign X positions, respecting manually set `person.x` or calculating if `null`.
             const xPositionsByLevel = {}; // Tracks the next available X position for each level if auto-calculating
 
             function assignXPositions(person) {
-                // Y position: top of the node aligns with birth year
-                person.y = (person.birthYear - minYear) * pixelsPerYear + TOP_PADDING;
+                if (hasYears) {
+                    // Original Y position logic for when years are present
+                    person.y = (person.birthYear - minYear) * pixelsPerYear + TOP_PADDING;
+                } else {
+                    // New Y position logic for when no years are present, based on level
+                    person.y = person.level * VERTICAL_LEVEL_SPACING + TOP_PADDING;
+                }
 
                 if (person.x !== null) {
                     // If person.x is already set (e.g., by dragging or import), use it.
                     // Recursively position children based on their own rules
-                    person.children.sort((a, b) => a.birthYear - b.birthYear);
+                    person.children.sort((a, b) => a.birthYear - b.birthYear); // Still sort children by birth year if available
                     person.children.forEach(child => assignXPositions(child));
                 } else {
                     // Auto-calculate X position if not manually set
@@ -1095,8 +1297,10 @@
                 maxCalculatedY = Math.max(maxCalculatedY, p.y + p.actualNodeHeight); // Use actualNodeHeight
             });
 
-            const finalSvgWidth = Math.max(svgContainerWidth, maxCalculatedX + 50); // Ensure enough space
-            const finalSvgHeight = maxCalculatedY + 50; // Add padding for bottom
+            // Increased padding for rotation (was 50, now NODE_WIDTH * 2 for more buffer)
+            const paddingForRotation = NODE_WIDTH * 2;
+            const finalSvgWidth = Math.max(svgContainerWidth, maxCalculatedX + paddingForRotation); 
+            const finalSvgHeight = maxCalculatedY + paddingForRotation; // Add padding for bottom
             
             svg.setAttribute('viewBox', `0 0 ${finalSvgWidth} ${finalSvgHeight}`);
             svg.setAttribute('height', finalSvgHeight);
@@ -1104,7 +1308,7 @@
             svg.style.transform = `scale(${treeScale}) rotate(${rotationAngle}deg)`;
 
             // Drawing year lines first (conditional)
-            if (showYearLines) {
+            if (showYearLines && hasYears) {
                 for (let year = minYear; year <= maxYear; year += YEAR_LINE_INTERVAL) {
                     const yPos = (year - minYear) * pixelsPerYear + TOP_PADDING;
                     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
@@ -1116,7 +1320,7 @@
                     svg.appendChild(line);
 
                     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                    const textX = finalSvgWidth - 10;
+                    const textX = finalSvgWidth - 20; // Adjusted for more clearance from right edge
                     const textY = yPos - 5;
                     text.setAttribute('x', textX);
                     text.setAttribute('y', textY);
@@ -1218,7 +1422,20 @@
 
                 const wrappedNameLines = getWrappedText(person.name, NODE_WIDTH - 20, nameFontSize); // 20px for horizontal padding
 
-                const totalTextHeight = (wrappedNameLines.length * nameLineHeight) + yearsLineHeight;
+                let yearsContent = '';
+                if (hasYears) {
+                    yearsContent = `${person.birthYear} - ${person.deathYear || 'Present'}`;
+                } else {
+                    if (person.birthYear && person.deathYear) {
+                        yearsContent = `${person.birthYear} - ${person.deathYear}`;
+                    } else if (person.birthYear) {
+                        yearsContent = `Born: ${person.birthYear}`;
+                    } else if (person.deathYear) {
+                        yearsContent = `Died: ${person.deathYear}`;
+                    }
+                }
+                
+                const totalTextHeight = (wrappedNameLines.length * nameLineHeight) + (yearsContent ? yearsLineHeight : 0);
 
                 // Calculate the starting Y for the text block to center it vertically within the remaining space
                 let textBlockStartY = contentY + (person.actualNodeHeight - contentY - totalTextHeight) / 2;
@@ -1237,15 +1454,17 @@
                     nodeGroup.appendChild(nameText);
                 });
 
-                const yearsText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                const yearsTextX = NODE_WIDTH / 2; // Center horizontally
-                const yearsTextY = textBlockStartY + (wrappedNameLines.length * nameLineHeight) + (yearsLineHeight / 2); // Position after wrapped names
-                yearsText.setAttribute('x', yearsTextX); 
-                yearsText.setAttribute('y', yearsTextY); 
-                yearsText.textContent = `${person.birthYear} - ${person.deathYear || 'Present'}`;
-                // Calculate center of text line relative to nodeGroup's origin for rotation
-                yearsText.setAttribute('transform', `rotate(${-rotationAngle} ${yearsTextX} ${yearsTextY})`);
-                nodeGroup.appendChild(yearsText);
+                if (yearsContent) {
+                    const yearsText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    const yearsTextX = NODE_WIDTH / 2; // Center horizontally
+                    const yearsTextY = textBlockStartY + (wrappedNameLines.length * nameLineHeight) + (yearsLineHeight / 2); // Position after wrapped names
+                    yearsText.setAttribute('x', yearsTextX); 
+                    yearsText.setAttribute('y', yearsTextY); 
+                    yearsText.textContent = yearsContent;
+                    // Calculate center of text line relative to nodeGroup's origin for rotation
+                    yearsText.setAttribute('transform', `rotate(${-rotationAngle} ${yearsTextX} ${yearsTextY})`);
+                    nodeGroup.appendChild(yearsText);
+                }
 
                 svg.appendChild(nodeGroup);
 
@@ -1254,9 +1473,17 @@
                     const lifeline = document.createElementNS('http://www.w3.org/2000/svg', 'line');
                     const lifelineX = person.x + NODE_WIDTH + LIFELINE_OFFSET;
                     
-                    const currentOrDeathYear = person.deathYear || new Date().getFullYear();
-                    const lifelineY1 = (person.birthYear - minYear) * pixelsPerYear + TOP_PADDING;
-                    const lifelineY2 = (currentOrDeathYear - minYear) * pixelsPerYear + TOP_PADDING;
+                    let lifelineY1, lifelineY2;
+                    if (hasYears) {
+                        const currentOrDeathYear = person.deathYear || new Date().getFullYear();
+                        lifelineY1 = (person.birthYear - minYear) * pixelsPerYear + TOP_PADDING;
+                        lifelineY2 = (currentOrDeathYear - minYear) * pixelsPerYear + TOP_PADDING;
+                    } else {
+                        // For year-less tree, lifelines just span the node height or fixed length
+                        lifelineY1 = person.y;
+                        lifelineY2 = person.y + person.actualNodeHeight;
+                    }
+                    
 
                     lifeline.setAttribute('x1', lifelineX);
                     lifeline.setAttribute('y1', lifelineY1);
@@ -1305,8 +1532,8 @@
             };
 
             const headers = parseCsvLine(lines[0]);
-            if (!headers.includes('ID') || !headers.includes('Name') || !headers.includes('BirthYear')) {
-                console.error('CSV must contain "ID", "Name", and "BirthYear" columns.');
+            if (!headers.includes('ID') || !headers.includes('Name')) { // Relaxed BirthYear requirement for year-less trees
+                console.error('CSV must contain "ID" and "Name" columns.');
                 return { family: [], maxIdNum: 0 };
             }
 
@@ -1330,8 +1557,7 @@
                     } else if (header === 'Name') {
                         person.name = value;
                     } else if (header === 'BirthYear') {
-                        person.birthYear = parseInt(value);
-                        if (isNaN(person.birthYear)) person.birthYear = null;
+                        person.birthYear = value ? parseInt(value) : null;
                     } else if (header === 'DeathYear') {
                         person.deathYear = value ? parseInt(value) : null;
                     } else if (header === 'Parent1ID') {
@@ -1345,7 +1571,7 @@
                     }
                 });
 
-                if (person.id && person.name && person.birthYear !== null && !isNaN(person.birthYear)) {
+                if (person.id && person.name) { // Only require ID and Name
                     newFamily.push(person);
                 } else {
                     console.warn('Skipping incomplete or invalid person data from CSV:', person);
@@ -1504,6 +1730,121 @@
         }
         // --- End New Function: Export to CSV ---
 
+        // New: Edit as Table functions
+        function openEditTableModal() {
+            populateEditTable();
+            document.getElementById('editTableModal').style.display = 'block';
+        }
+
+        function closeEditTableModal() {
+            document.getElementById('editTableModal').style.display = 'none';
+        }
+
+        function populateEditTable() {
+            const tbody = document.getElementById('familyDataTable').querySelector('tbody');
+            tbody.innerHTML = ''; // Clear existing rows
+
+            family.forEach(person => {
+                const row = tbody.insertRow();
+                row.dataset.id = person.id; // Store ID for easy lookup
+
+                row.insertCell().textContent = person.id; // ID column (not editable)
+                row.insertCell().innerHTML = `<div contenteditable="true" data-field="name">${person.name}</div>`;
+                row.insertCell().innerHTML = `<div contenteditable="true" data-field="birthYear">${person.birthYear === null ? '' : person.birthYear}</div>`;
+                row.insertCell().innerHTML = `<div contenteditable="true" data-field="deathYear">${person.deathYear === null ? '' : person.deathYear}</div>`;
+                row.insertCell().innerHTML = `<div contenteditable="true" data-field="parent1Id">${person.parent1Id || ''}</div>`;
+                row.insertCell().innerHTML = `<div contenteditable="true" data-field="parent2Id">${person.parent2Id || ''}</div>`;
+                row.insertCell().innerHTML = `<div contenteditable="true" data-field="imageUrl">${person.imageUrl || ''}</div>`;
+                row.insertCell().innerHTML = `<div contenteditable="true" data-field="x">${person.x === null ? '' : person.x.toFixed(2)}</div>`;
+            });
+        }
+
+        function saveTableChanges() {
+            const tbody = document.getElementById('familyDataTable').querySelector('tbody');
+            const newFamilyData = [];
+            let maxIdNum = 0;
+
+            for (const row of tbody.rows) {
+                const nameDiv = row.querySelector('[data-field="name"]');
+                const birthYearDiv = row.querySelector('[data-field="birthYear"]');
+                const deathYearDiv = row.querySelector('[data-field="deathYear"]');
+                const parent1IdDiv = row.querySelector('[data-field="parent1Id"]');
+                const parent2IdDiv = row.querySelector('[data-field="parent2Id"]');
+                const imageUrlDiv = row.querySelector('[data-field="imageUrl"]');
+                const xDiv = row.querySelector('[data-field="x"]');
+
+                const person = {
+                    id: row.dataset.id,
+                    name: nameDiv.textContent.trim(),
+                    birthYear: birthYearDiv.textContent.trim() ? parseInt(birthYearDiv.textContent.trim()) : null,
+                    deathYear: deathYearDiv.textContent.trim() ? parseInt(deathYearDiv.textContent.trim()) : null,
+                    parent1Id: parent1IdDiv.textContent.trim() || null,
+                    parent2Id: parent2IdDiv.textContent.trim() || null,
+                    imageUrl: imageUrlDiv.textContent.trim() || null,
+                    x: xDiv.textContent.trim() ? parseFloat(xDiv.textContent.trim()) : null,
+                };
+
+                // Validate inputs
+                if (!person.name) {
+                    showMessage(`Error: Name cannot be empty for ID ${person.id}.`);
+                    return; // Stop saving if validation fails
+                }
+                if (person.birthYear !== null && isNaN(person.birthYear)) {
+                    showMessage(`Error: Invalid Birth Year for ${person.name} (ID: ${person.id}). Must be a number or empty.`);
+                    return;
+                }
+                if (person.deathYear !== null && isNaN(person.deathYear)) {
+                    showMessage(`Error: Invalid Death Year for ${person.name} (ID: ${person.id}). Must be a number or empty.`);
+                    return;
+                }
+                if (person.birthYear !== null && person.deathYear !== null && person.birthYear >= person.deathYear) {
+                    showMessage(`Error: Birth year must be before death year for ${person.name} (ID: ${person.id}).`);
+                    return;
+                }
+                if (person.x !== null && isNaN(person.x)) {
+                    showMessage(`Error: Invalid X Position for ${person.name} (ID: ${person.id}). Must be a number or empty.`);
+                    return;
+                }
+
+                // Update maxIdNum for nextPersonId generation
+                const numId = parseInt(person.id.substring(1));
+                if (!isNaN(numId)) {
+                    maxIdNum = Math.max(maxIdNum, numId);
+                }
+
+                newFamilyData.push(person);
+            }
+
+            // Perform parent ID validation against the *new* set of IDs
+            const allIds = new Set(newFamilyData.map(p => p.id));
+            for (const person of newFamilyData) {
+                if (person.parent1Id && !allIds.has(person.parent1Id)) {
+                    showMessage(`Error: Parent 1 ID "${person.parent1Id}" for ${person.name} (ID: ${person.id}) does not exist in the current data.`);
+                    return;
+                }
+                if (person.parent2Id && !allIds.has(person.parent2Id)) {
+                    showMessage(`Error: Parent 2 ID "${person.parent2Id}" for ${person.name} (ID: ${person.id}) does not exist in the current data.`);
+                    return;
+                }
+                 if (person.id === person.parent1Id || person.id === person.parent2Id) {
+                    showMessage(`Error: A person cannot be their own parent: ${person.name} (ID: ${person.id}).`);
+                    return;
+                }
+                if (person.parent1Id && person.parent2Id && person.parent1Id === person.parent2Id) {
+                    showMessage(`Error: Cannot select the same person for both Parent 1 and Parent 2 for ${person.name} (ID: ${person.id}).`);
+                    return;
+                }
+            }
+
+
+            family = newFamilyData;
+            nextPersonId = maxIdNum + 1; // Ensure nextPersonId is correctly updated
+            updateParentSelect();
+            drawFamilyTree();
+            resetFormAndSelection();
+            showMessage('Family data updated from table!');
+            closeEditTableModal();
+        }
 
         function saveAsJpg() {
             const treeContainer = document.querySelector('.tree-container'); 
@@ -1553,7 +1894,7 @@
             document.getElementById('bgPosXSlider').value = backgroundPosX;
             document.getElementById('currentBgPosX').textContent = `${backgroundPosX}%`;
             document.getElementById('bgPosYSlider').value = backgroundPosY;
-            document.getElementById('currentBgPosY').textContent = `${bgPosY}%`;
+            document.getElementById('currentBgPosY').textContent = `${backgroundPosY}%`;
             updateBackgroundStyle(); // Apply initial background settings
 
             // Initialize tree scale slider
