@@ -110,11 +110,14 @@
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             padding: 20px;
-            overflow: auto;
+            overflow: auto; /* Enable scrolling if content overflows */
             width: 90%;
             max-width: 1000px;
             min-height: 500px; /* Ensure some visibility */
             position: relative; /* For tooltip positioning */
+            background-repeat: no-repeat;
+            background-size: 100%;
+            background-position: 0% 0%;
         }
 
         svg {
@@ -123,8 +126,8 @@
             min-height: 500px;
             display: block;
             user-select: none; /* Prevent text selection during drag */
-            transition: transform 0.3s ease-in-out; /* Smooth rotation */
-            transform-origin: center center; /* Rotate around its center */
+            transition: transform 0.3s ease-in-out; /* Smooth rotation and scaling */
+            transform-origin: center center; /* Rotate and scale around its center */
         }
 
         .person-node rect {
@@ -150,9 +153,13 @@
             fill: #f0f0f0;
             font-size: 12px;
             text-anchor: middle;
-            dominant-baseline: central;
             pointer-events: none; /* Allow click/drag to pass to the group */
         }
+        
+        .person-node .name-text {
+            dominant-baseline: central; /* Align text vertically in the middle of its line */
+        }
+
 
         .person-node .node-image {
             object-fit: cover; /* Cover the area */
@@ -244,8 +251,8 @@
 
     <div class="controls">
         <input type="text" id="personName" placeholder="Name" required>
-        <input type="number" id="birthYear" placeholder="Birth Year" min="1000" max="2050">
-        <input type="number" id="deathYear" placeholder="Death Year (optional)" min="1000" max="2050">
+        <input type="number" id="birthYear" placeholder="Birth Year" min="-100000" max="100000">
+        <input type="number" id="deathYear" placeholder="Death Year (optional)" min="-100000" max="100000">
         <select id="parent1Select">
             <option value="">Parent 1 (None)</option>
         </select>
@@ -263,6 +270,8 @@
 
         <input type="file" id="imageFileInput" accept="image/*" class="hidden-file-input" onchange="handleImageUpload()">
         <button id="loadImageBtn" onclick="document.getElementById('imageFileInput').click()" disabled>Load Image</button>
+        <button id="removeImageBtn" onclick="removeImage()" disabled>Remove Image</button>
+
         <button onclick="saveAsJpg()">Save to JPG</button>
         
         <label for="zoomSlider">Zoom:</label>
@@ -276,8 +285,37 @@
         <button onclick="toggleLifelines()">Toggle Lifelines</button>
         <button onclick="rotateTree()">Rotate Tree</button>
         <button id="removePersonBtn" onclick="removePerson()" disabled>Remove Person</button>
-        <button onclick="loadExampleFamily()">Load Example Family</button>
+        <button onclick="toggleYearLines()">Toggle Year Lines</button>
+        <!-- Dropdown for example families -->
+        <select id="exampleFamilySelect" onchange="loadFamilyFromSelectedExample()">
+            <option value="">Load Example Family</option>
+            <option value="cleopatra_family.csv">Cleopatra</option>
+            <option value="queen_victoria_family.csv">Queen Victoria</option>
+            <option value="asgard_family.csv">Asgard</option>
+        </select>
         <button onclick="clearTree()">Clear Tree</button>
+
+        <!-- Tree Scale Slider -->
+        <label for="treeScaleSlider">Tree Scale:</label>
+        <input type="range" id="treeScaleSlider" min="0.5" max="2.0" value="1.0" step="0.1" onchange="updateTreeScale()" oninput="updateTreeScale()">
+        <span id="currentTreeScale" class="zoom-label">1.0x</span>
+
+        <!-- Background Image Controls -->
+        <input type="file" id="bgImageFileInput" accept="image/*" class="hidden-file-input" onchange="handleBackgroundUpload()">
+        <button onclick="document.getElementById('bgImageFileInput').click()">Add Background Image</button>
+        <button id="removeBgImageBtn" onclick="removeBackgroundImage()" disabled>Remove Background Image</button>
+        
+        <label for="bgSizeSlider">BG Size:</label>
+        <input type="range" id="bgSizeSlider" min="10" max="200" value="100" step="5" onchange="updateBackgroundStyle()" oninput="updateBackgroundStyle()">
+        <span id="currentBgSize" class="zoom-label">100%</span>
+        
+        <label for="bgPosXSlider">BG Pos X:</label>
+        <input type="range" id="bgPosXSlider" min="-200" max="200" value="0" step="1" onchange="updateBackgroundStyle()" oninput="updateBackgroundStyle()">
+        <span id="currentBgPosX" class="zoom-label">0%</span>
+        
+        <label for="bgPosYSlider">BG Pos Y:</label>
+        <input type="range" id="bgPosYSlider" min="-200" max="200" value="0" step="1" onchange="updateBackgroundStyle()" oninput="updateBackgroundStyle()">
+        <span id="currentBgPosY" class="zoom-label">0%</span>
     </div>
 
     <div class="tree-container">
@@ -291,6 +329,7 @@
         let nextPersonId = 1;
         let selectedPersonId = null; // Stores the ID of the currently selected person
         let showLifelines = false; // Controls lifeline visibility
+        let showYearLines = true; // Controls year line visibility
 
         // Drag & Drop variables
         let isDragging = false;
@@ -299,18 +338,25 @@
         let dragOffsetX = 0; // Stores the offset from node's left edge to mouse click point
         let draggedSvgGroup = null; // Reference to the SVG 'g' element being dragged
 
-        // Rotation variable
+        // Rotation and Scaling variables
         let rotationAngle = 0; // In degrees, for CSS transform
+        let treeScale = 1.0; // Scale factor for the entire tree
 
         // Configuration for SVG drawing
-        const NODE_WIDTH = 120;
-        const NODE_HEIGHT = 60;
+        const NODE_WIDTH = 180; // Changed from 120 to 180 for more text space
+        const MIN_NODE_HEIGHT = 60; // Minimum height for nodes
         let imageSize = 40; // Initial size for the person's image, now variable
         let pixelsPerYear = 3; // Initial pixels per year, controlled by slider
-        const YEAR_LINE_INTERVAL = 20; // Every 20 years
+        const YEAR_LINE_INTERVAL = 10; // Every 10 years
         const HORIZONTAL_SPACING = 30; // Horizontal space between nodes at the same approximate year level
         let TOP_PADDING = imageSize + 10; // Space above the earliest year for images and margin (now dynamic)
         const LIFELINE_OFFSET = 5; // Horizontal offset for the lifeline from the node's right edge
+
+        // Background image variables
+        let backgroundImageUrl = null;
+        let backgroundSize = 100; // in percentage
+        let backgroundPosX = 0;   // in percentage
+        let backgroundPosY = 0;   // in percentage
 
         function generateId() {
             return 'p' + (nextPersonId++);
@@ -326,49 +372,6 @@
             }, 3000); // Hide after 3 seconds
         }
 
-        // Example Family Data
-        function loadExampleFamily() {
-            family = [
-                { id: 'QV', name: 'Queen Victoria', birthYear: 1819, deathYear: 1901, parent1Id: null, parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Queen_Victoria_by_Bassano.jpg/440px-Queen_Victoria_by_Bassano.jpg', x: null },
-                { id: 'PVR', name: 'Victoria, Princess Royal', birthYear: 1840, deathYear: 1901, parent1Id: 'QV', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/e/e2/Victoria_Empress_Frederick.jpg', x: null },
-                { id: 'E7', name: 'Edward VII', birthYear: 1841, deathYear: 1910, parent1Id: 'QV', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Edward_VII_of_the_United_Kingdom_-_Bain.jpg/440px-Edward_VII_of_the_United_Kingdom_-_Bain.jpg', x: null },
-                { id: 'ADH', name: 'Alice, Grand Duchess of Hesse', birthYear: 1843, deathYear: 1878, parent1Id: 'QV', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Alice_Princess_of_the_United_Kingdom%2C_Grand_Duchess_of_Hesse_and_by_Rhine_%28cropped%29.jpg/440px-Alice_Princess_of_the_United_Kingdom%2C_Grand_Duchess_of_Hesse_and_by_Rhine_%28cropped%29.jpg', x: null },
-                { id: 'ADSCG', name: 'Alfred, Duke of Saxe-Coburg and Gotha', birthYear: 1844, deathYear: 1900, parent1Id: 'QV', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Alfred%2C_Duke_of_Saxe-Coburg_and_Gotha_by_Marius_G%C3%A9za_Erd%C3%A9ly.jpg/440px-Alfred%2C_Duke_of_Saxe-Coburg_and_Gotha_by_Marius_G%C3%A9za_Erd%C3%A9ly.jpg', x: null },
-                { id: 'PHSH', name: 'Helena, Princess Christian of Schleswig-Holstein', birthYear: 1846, deathYear: 1923, parent1Id: 'QV', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Princess_Helena_%281846-1923%29.jpg/440px-Princess_Helena_%281846-1923%29.jpg', x: null },
-                { id: 'PDA', name: 'Louise, Duchess of Argyll', birthYear: 1848, deathYear: 1939, parent1Id: 'QV', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/Princess_Louise%2C_Duchess_of_Argyll.jpg/440px-Princess_Louise%2C_Duchess_of_Argyll.jpg', x: null },
-                { id: 'DCS', name: 'Arthur, Duke of Connaught and Strathearn', birthYear: 1850, deathYear: 1942, parent1Id: 'QV', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Prince_Arthur%2C_Duke_of_Connaught_and_Strathearn_%281850-1942%29.jpg/440px-Prince_Arthur%2C_Duke_of_Connaught_and_Strathearn_%281850-1942%29.jpg', x: null },
-                { id: 'DA', name: 'Leopold, Duke of Albany', birthYear: 1853, deathYear: 1884, parent1Id: 'QV', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/07/Prince_Leopold%2C_Duke_of_Albany.jpg/440px-Prince_Leopold%2C_Duke_of_Albany.jpg', x: null },
-                { id: 'PHB', name: 'Beatrice, Princess Henry of Battenberg', birthYear: 1857, deathYear: 1944, parent1Id: 'QV', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/Princess_Beatrice_%281857-1944%29.jpg/440px-Princess_Beatrice_%281857-1944%29.jpg', x: null },
-                { id: 'G5', name: 'George V', birthYear: 1865, deathYear: 1936, parent1Id: 'E7', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/King_George_V_at_the_Age_of_28.jpg/440px-King_George_V_at_the_Age_of_28.jpg', x: null },
-                { id: 'LPR', name: 'Louise, Princess Royal (daughter of E7)', birthYear: 1867, deathYear: 1931, parent1Id: 'E7', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Louise%2C_Princess_Royal.jpg/440px-Louise%2C_Princess_Royal.jpg', x: null },
-                { id: 'PVLB', name: 'Victoria, Princess Louis of Battenberg', birthYear: 1863, deathYear: 1950, parent1Id: 'ADH', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d8/Princess_Victoria_of_Hesse_and_by_Rhine.jpg/440px-Princess_Victoria_of_Hesse_and_by_Rhine.jpg', x: null },
-                { id: 'GDESA', name: 'Elizabeth, Grand Duchess Sergei Alexandrovich', birthYear: 1864, deathYear: 1918, parent1Id: 'ADH', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Grand_Duchess_Elizabeth_Feodorovna_%28ne%C3%A9_Princess_Elisabeth_of_Hesse-Darmstadt%29_by_L.M.Kruse_in_1884.jpg/440px-Grand_Duchess_Elizabeth_Feodorovna_%28ne%C3%A9_Princess_Elisabeth_of_Hesse-Darmstadt%29_by_L.M.Kruse_in_1884.jpg', x: null },
-                { id: 'AAR', name: 'Alix of Hesse, Empress Alexandra Feodorovna of Russia', birthYear: 1872, deathYear: 1918, parent1Id: 'ADH', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Empress_Alexandra_Feodorovna_%28Alix_of_Hesse%29_by_Boris_Kustodiev.jpg/440px-Empress_Alexandra_Feodorovna_%28ne%C3%A9_Princess_Elisabeth_of_Hesse-Darmstadt%29_by_L.M.Kruse_in_1884.jpg', x: null },
-                { id: 'E8', name: 'Edward VIII', birthYear: 1894, deathYear: 1972, parent1Id: 'G5', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/King_Edward_VIII_%28cropped%29.jpg/440px-King_Edward_VIII_%28cropped%29.jpg', x: null },
-                { id: 'G6', name: 'George VI', birthYear: 1895, deathYear: 1952, parent1Id: 'G5', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/King_George_VI_of_the_United_Kingdom.jpg/440px-King_George_VI_of_the_United_Kingdom_-_Bain.jpg', x: null },
-                { id: 'LM1EMB', name: 'Louis Mountbatten, 1st Earl Mountbatten of Burma', birthYear: 1900, deathYear: 1979, parent1Id: 'PVLB', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Louis_Mountbatten.jpg/440px-Louis_Mountbatten.jpg', x: null },
-                { id: 'ON', name: 'Olga Nikolaevna', birthYear: 1895, deathYear: 1918, parent1Id: 'AAR', parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Grand_Duchess_Olga_Nikolaevna_of_Russia_1913.jpg/440px-Grand_Duchess_Olga_Nikolaevna_of_Russia_1913.jpg', x: null },
-                // Adding Albert, Queen Victoria's husband, and some dual-parent children for demonstration
-                { id: 'PCONSORT', name: 'Prince Albert (Consort)', birthYear: 1819, deathYear: 1861, parent1Id: null, parent2Id: null, imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Prince_Albert_by_John_Partridge.jpg/440px-Prince_Albert_by_John_Partridge.jpg', x: null },
-                { id: 'PVR_dual', name: 'Victoria, Princess Royal (dual parents)', birthYear: 1840, deathYear: 1901, parent1Id: 'QV', parent2Id: 'PCONSORT', imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/e/e2/Victoria_Empress_Frederick.jpg', x: null },
-                { id: 'E7_dual', name: 'Edward VII (dual parents)', birthYear: 1841, deathYear: 1910, parent1Id: 'QV', parent2Id: 'PCONSORT', imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Edward_VII_of_the_United_Kingdom_-_Bain.jpg/440px-Edward_VII_of_the_United_Kingdom_-_Bain.jpg', x: null },
-            ];
-            
-            // Adjust PVR and E7 in the original example to use the new dual-parent IDs
-            family = family.filter(p => p.id !== 'PVR' && p.id !== 'E7');
-
-
-            const maxIdNum = family.reduce((max, person) => {
-                const num = parseInt(person.id.substring(1));
-                return num > max ? num : max;
-            }, 0);
-            nextPersonId = maxIdNum + 1;
-
-            updateParentSelect();
-            drawFamilyTree();
-            resetFormAndSelection(); // Clear any existing selection and form
-        }
-
         function clearTree() {
             family = [];
             nextPersonId = 1;
@@ -376,6 +379,8 @@
             updateParentSelect();
             drawFamilyTree();
             resetFormAndSelection();
+            document.getElementById('exampleFamilySelect').value = ""; // Reset dropdown
+            showMessage('Tree cleared.');
         }
 
         function updateParentSelect() {
@@ -522,6 +527,7 @@
             document.getElementById('loadImageBtn').disabled = true;
             document.getElementById('linkImageBtn').disabled = true; // Disable link image button
             document.getElementById('removePersonBtn').disabled = true; // Disable remove person button
+            document.getElementById('removeImageBtn').disabled = true; // Disable remove image button on reset
         }
 
         function selectPerson(id) {
@@ -542,19 +548,11 @@
                     document.getElementById('loadImageBtn').disabled = false;
                     document.getElementById('linkImageBtn').disabled = false; // Enable link image button
                     document.getElementById('removePersonBtn').disabled = false; // Enable remove person button
+                    document.getElementById('removeImageBtn').disabled = !person.imageUrl; 
                 }
             } else {
                 // If selection cleared, reset form and buttons
-                document.getElementById('personName').value = '';
-                document.getElementById('birthYear').value = '';
-                document.getElementById('deathYear').value = '';
-                document.getElementById('parent1Select').value = ''; // Clear parent 1 select
-                document.getElementById('parent2Select').value = ''; // Clear parent 2 select
-                document.getElementById('imageUrlInput').value = ''; // Clear image URL input
-                document.getElementById('addUpdateBtn').textContent = 'Add Person';
-                document.getElementById('loadImageBtn').disabled = true;
-                document.getElementById('linkImageBtn').disabled = true; // Disable link image button
-                document.getElementById('removePersonBtn').disabled = true; // Disable remove person button
+                resetFormAndSelection();
             }
             updateParentSelect(); // Update dropdown based on current selection
         }
@@ -588,6 +586,7 @@
                     document.getElementById('imageUrlInput').value = e.target.result; // Update URL input too
                     drawFamilyTree(); // Redraw with the new image
                     showMessage(`Image loaded for ${personToUpdate.name}.`);
+                    document.getElementById('removeImageBtn').disabled = false; // Enable remove image button
                 }
             };
             reader.readAsDataURL(file);
@@ -610,9 +609,73 @@
                 personToUpdate.imageUrl = imageUrl;
                 drawFamilyTree();
                 showMessage(`Image linked for ${personToUpdate.name}.`);
+                document.getElementById('removeImageBtn').disabled = false; // Enable remove image button
             }
         }
 
+        function removeImage() {
+            if (!selectedPersonId) {
+                alert('Please select a person first.');
+                return;
+            }
+
+            const personToUpdate = family.find(p => p.id === selectedPersonId);
+            if (personToUpdate) {
+                personToUpdate.imageUrl = null;
+                document.getElementById('imageUrlInput').value = '';
+                drawFamilyTree();
+                showMessage(`Image removed for ${personToUpdate.name}.`);
+                document.getElementById('removeImageBtn').disabled = true; // Disable after removal
+            }
+        }
+
+        // Background Image functions
+        function handleBackgroundUpload() {
+            const fileInput = document.getElementById('bgImageFileInput');
+            const file = fileInput.files[0];
+
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                backgroundImageUrl = e.target.result;
+                updateBackgroundStyle(); // Apply the new image and current slider settings
+                document.getElementById('removeBgImageBtn').disabled = false;
+                showMessage('Background image loaded!');
+            };
+            reader.readAsDataURL(file);
+            fileInput.value = ''; // Clear file input
+        }
+
+        function removeBackgroundImage() {
+            backgroundImageUrl = null;
+            updateBackgroundStyle(); // Apply the change
+            document.getElementById('removeBgImageBtn').disabled = true;
+            showMessage('Background image removed.');
+        }
+
+        function updateBackgroundStyle() {
+            const treeContainer = document.querySelector('.tree-container');
+            
+            backgroundSize = parseInt(document.getElementById('bgSizeSlider').value);
+            backgroundPosX = parseInt(document.getElementById('bgPosXSlider').value);
+            backgroundPosY = parseInt(document.getElementById('bgPosYSlider').value);
+
+            document.getElementById('currentBgSize').textContent = `${backgroundSize}%`;
+            document.getElementById('currentBgPosX').textContent = `${backgroundPosX}%`;
+            document.getElementById('currentBgPosY').textContent = `${backgroundPosY}%`;
+
+            if (backgroundImageUrl) {
+                treeContainer.style.backgroundImage = `url('${backgroundImageUrl}')`;
+                treeContainer.style.backgroundRepeat = 'no-repeat';
+                treeContainer.style.backgroundSize = `${backgroundSize}%`;
+                treeContainer.style.backgroundPosition = `${backgroundPosX}% ${backgroundPosY}%`;
+            } else {
+                treeContainer.style.backgroundImage = 'none';
+                treeContainer.style.backgroundSize = 'auto';
+                treeContainer.style.backgroundPosition = '0 0';
+            }
+        }
 
         function showParentTooltip(event, personId) {
             const person = family.find(p => p.id === personId);
@@ -671,14 +734,31 @@
         function toggleLifelines() {
             showLifelines = !showLifelines;
             drawFamilyTree();
+            showMessage(`Lifelines ${showLifelines ? 'shown' : 'hidden'}.`);
+        }
+
+        function toggleYearLines() {
+            showYearLines = !showYearLines;
+            drawFamilyTree();
+            showMessage(`Year lines ${showYearLines ? 'shown' : 'hidden'}.`);
+        }
+
+        // Function to update overall tree scale
+        function updateTreeScale() {
+            treeScale = parseFloat(document.getElementById('treeScaleSlider').value);
+            document.getElementById('currentTreeScale').textContent = `${treeScale.toFixed(1)}x`;
+            const svg = document.getElementById('familyTreeSvg');
+            // Apply both rotation and scale as CSS transform
+            svg.style.transform = `scale(${treeScale}) rotate(${rotationAngle}deg)`;
         }
 
         function rotateTree() {
             rotationAngle = (rotationAngle + 90) % 360;
             const svg = document.getElementById('familyTreeSvg');
-            svg.style.transform = `rotate(${rotationAngle}deg)`;
+            // Apply both rotation and scale as CSS transform
+            svg.style.transform = `scale(${treeScale}) rotate(${rotationAngle}deg)`;
             showMessage(`Tree rotated to ${rotationAngle} degrees.`);
-            drawFamilyTree(); // Redraw to apply inverse rotation to text elements
+            drawFamilyTree(); // Redraw to apply inverse rotation to text elements, images, AND boxes
         }
 
         function removePerson() {
@@ -805,6 +885,54 @@
         }
         // --- End Drag and Drop Functions ---
 
+        // Helper function to wrap text within a given width
+        function getWrappedText(text, maxWidth, fontSize) {
+            const svg = document.getElementById('familyTreeSvg');
+            const tempText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            tempText.style.fontSize = `${fontSize}px`;
+            tempText.style.fontFamily = 'Arial, sans-serif'; // Ensure consistent font for measurement
+            svg.appendChild(tempText); 
+
+            const words = text.split(' ');
+            let line = '';
+            let lines = [];
+            
+            for (let i = 0; i < words.length; i++) {
+                const testLine = line + (i > 0 ? ' ' : '') + words[i];
+                tempText.textContent = testLine;
+                if (tempText.getComputedTextLength() > maxWidth && i > 0) {
+                    lines.push(line);
+                    line = words[i];
+                } else {
+                    line = testLine;
+                }
+            }
+            lines.push(line);
+            
+            svg.removeChild(tempText); // Remove the temporary text element
+
+            const maxApproxCharsPerLine = Math.floor(maxWidth / (fontSize * 0.6)); // Rough estimate
+            return lines.map(l => {
+                if (l.length > maxApproxCharsPerLine + 5 && l.includes(' ')) { 
+                    const parts = l.split(' ');
+                    let currentTruncated = '';
+                    for (const part of parts) {
+                        if ((currentTruncated + ' ' + part).length <= maxApproxCharsPerLine - 3) {
+                            currentTruncated += (currentTruncated ? ' ' : '') + part;
+                        } else {
+                            break;
+                        }
+                    }
+                    if (currentTruncated !== l && currentTruncated.length > 0) {
+                        return currentTruncated + '...';
+                    }
+                } else if (l.length > maxApproxCharsPerLine * 1.5) { 
+                     return l.substring(0, maxApproxCharsPerLine * 1.5 - 3) + '...';
+                }
+                return l;
+            });
+        }
+
 
         function drawFamilyTree() {
             const svg = document.getElementById('familyTreeSvg');
@@ -820,11 +948,10 @@
             minYear = Math.floor(minYear / YEAR_LINE_INTERVAL) * YEAR_LINE_INTERVAL; // Round down to nearest interval
             maxYear = Math.ceil(maxYear / YEAR_LINE_INTERVAL) * YEAR_LINE_INTERVAL;   // Round up to nearest interval
 
-            const totalHeight = (maxYear - minYear) * pixelsPerYear + TOP_PADDING + NODE_HEIGHT + 50; // Add padding for bottom
             const svgContainerWidth = svg.parentElement.offsetWidth - 40; // Parent width minus padding
             
             // Create a map for easy lookup and to hold layout properties
-            const peopleMap = new Map(family.map(p => [p.id, { ...p, children: [], y: 0, level: 0 }]));
+            const peopleMap = new Map(family.map(p => [p.id, { ...p, children: [], y: 0, level: 0, actualNodeHeight: MIN_NODE_HEIGHT }]));
 
             // Build child references (a person can have two parents)
             family.forEach(person => {
@@ -833,7 +960,8 @@
                 }
                 if (person.parent2Id && peopleMap.has(person.parent2Id)) {
                     // Avoid adding the same child twice if both parents are in the map
-                    if (!peopleMap.get(person.parent1Id) || peopleMap.get(person.parent1Id).children.indexOf(peopleMap.get(person.id)) === -1) {
+                    const parent1Children = peopleMap.get(person.parent1Id)?.children || [];
+                    if (!peopleMap.get(person.parent1Id) || parent1Children.indexOf(peopleMap.get(person.id)) === -1) {
                          peopleMap.get(person.parent2Id).children.push(peopleMap.get(person.id));
                     }
                 }
@@ -851,6 +979,28 @@
                 person.children.forEach(child => assignLevel(child, level + 1));
             }
             rootNodes.forEach(node => assignLevel(node, 0));
+
+            // Calculate node heights based on text wrapping
+            peopleMap.forEach(person => {
+                const nameFontSize = 12;
+                const yearsFontSize = 12;
+                const nameLineHeight = nameFontSize * 1.2;
+                const yearsLineHeight = yearsFontSize * 1.2;
+
+                const wrappedNameLines = getWrappedText(person.name, NODE_WIDTH - 20, nameFontSize); // 20px for horizontal padding
+
+                let textContentHeight = (wrappedNameLines.length * nameLineHeight) + yearsLineHeight + 5; // +5 for minor gap
+                
+                let calculatedHeight = textContentHeight;
+                if (person.imageUrl) {
+                    calculatedHeight += imageSize + 10; // Image height + top/bottom padding for image
+                } else {
+                    calculatedHeight += 10; // General top/bottom padding if no image
+                }
+
+                person.actualNodeHeight = Math.max(MIN_NODE_HEIGHT, calculatedHeight);
+            });
+
 
             // 2. Assign Y positions (top of the node aligns with birth year)
             // 3. Assign X positions, respecting manually set `person.x` or calculating if `null`.
@@ -937,40 +1087,45 @@
             rootNodes.forEach(node => assignXPositions(node));
 
 
-            // Determine overall SVG width needed based on calculated positions
+            // Determine overall SVG width and height needed based on calculated positions and actualNodeHeight
             let maxCalculatedX = 0;
+            let maxCalculatedY = 0;
             Array.from(peopleMap.values()).forEach(p => {
                 maxCalculatedX = Math.max(maxCalculatedX, p.x + NODE_WIDTH);
+                maxCalculatedY = Math.max(maxCalculatedY, p.y + p.actualNodeHeight); // Use actualNodeHeight
             });
+
             const finalSvgWidth = Math.max(svgContainerWidth, maxCalculatedX + 50); // Ensure enough space
-            svg.setAttribute('viewBox', `0 0 ${finalSvgWidth} ${totalHeight}`);
-            svg.setAttribute('height', totalHeight);
+            const finalSvgHeight = maxCalculatedY + 50; // Add padding for bottom
+            
+            svg.setAttribute('viewBox', `0 0 ${finalSvgWidth} ${finalSvgHeight}`);
+            svg.setAttribute('height', finalSvgHeight);
+            // Apply overall SVG rotation and scale
+            svg.style.transform = `scale(${treeScale}) rotate(${rotationAngle}deg)`;
 
-            // Calculate the inverse rotation for text elements
-            const rotateTextTransform = `rotate(${-rotationAngle})`;
+            // Drawing year lines first (conditional)
+            if (showYearLines) {
+                for (let year = minYear; year <= maxYear; year += YEAR_LINE_INTERVAL) {
+                    const yPos = (year - minYear) * pixelsPerYear + TOP_PADDING;
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', 0);
+                    line.setAttribute('y1', yPos);
+                    line.setAttribute('x2', finalSvgWidth);
+                    line.setAttribute('y2', yPos);
+                    line.setAttribute('class', 'year-line');
+                    svg.appendChild(line);
 
-
-            // Drawing year lines first
-            for (let year = minYear; year <= maxYear; year += YEAR_LINE_INTERVAL) {
-                const yPos = (year - minYear) * pixelsPerYear + TOP_PADDING;
-                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                line.setAttribute('x1', 0);
-                line.setAttribute('y1', yPos);
-                line.setAttribute('x2', finalSvgWidth);
-                line.setAttribute('y2', yPos);
-                line.setAttribute('class', 'year-line');
-                svg.appendChild(line);
-
-                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                const textX = finalSvgWidth - 10;
-                const textY = yPos - 5;
-                text.setAttribute('x', textX);
-                text.setAttribute('y', textY);
-                text.setAttribute('class', 'year-label');
-                text.textContent = year;
-                // Apply inverse rotation around its own position
-                text.setAttribute('transform', `${rotateTextTransform} translate(${textX}, ${textY}) rotate(${-rotationAngle}) translate(${-textX}, ${-textY})`);
-                svg.appendChild(text);
+                    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    const textX = finalSvgWidth - 10;
+                    const textY = yPos - 5;
+                    text.setAttribute('x', textX);
+                    text.setAttribute('y', textY);
+                    text.setAttribute('class', 'year-label');
+                    text.textContent = year;
+                    // Apply inverse rotation around its own position
+                    text.setAttribute('transform', `rotate(${-rotationAngle} ${textX} ${textY})`);
+                    svg.appendChild(text);
+                }
             }
 
             // Draw connections (lines) first, then nodes
@@ -979,7 +1134,7 @@
                 if (person.parent1Id && peopleMap.has(person.parent1Id)) {
                     const parent = peopleMap.get(person.parent1Id);
                     const parentCenterX = parent.x + NODE_WIDTH / 2;
-                    const parentBottomY = parent.y + NODE_HEIGHT;
+                    const parentBottomY = parent.y + parent.actualNodeHeight;
                     const childCenterX = person.x + NODE_WIDTH / 2;
                     const childTopY = person.y;
 
@@ -998,7 +1153,7 @@
                 if (person.parent2Id && peopleMap.has(person.parent2Id)) {
                     const parent = peopleMap.get(person.parent2Id);
                     const parentCenterX = parent.x + NODE_WIDTH / 2;
-                    const parentBottomY = parent.y + NODE_HEIGHT;
+                    const parentBottomY = parent.y + parent.actualNodeHeight;
                     const childCenterX = person.x + NODE_WIDTH / 2;
                     const childTopY = person.y;
 
@@ -1029,37 +1184,67 @@
                 rect.setAttribute('x', 0);
                 rect.setAttribute('y', 0);
                 rect.setAttribute('width', NODE_WIDTH);
-                rect.setAttribute('height', NODE_HEIGHT);
+                rect.setAttribute('height', person.actualNodeHeight); 
+                // Calculate center of rect relative to nodeGroup's origin for rotation
+                const rectCenterX = NODE_WIDTH / 2;
+                const rectCenterY = person.actualNodeHeight / 2;
+                rect.setAttribute('transform', `rotate(${-rotationAngle} ${rectCenterX} ${rectCenterY})`);
                 nodeGroup.appendChild(rect);
 
-                let textYOffsetName = 15; // Y for name text, relative to node top (0)
-                let textYOffsetYears = textYOffsetName + 20; // Y for years text
+                let contentY = 0; // Tracks the current vertical position within the node for placing elements
 
                 if (person.imageUrl) {
                     const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
                     image.setAttribute('href', person.imageUrl);
-                    image.setAttribute('x', (NODE_WIDTH - imageSize) / 2); // Center horizontally
-                    image.setAttribute('y', -imageSize - 5); // Position above the node rect
+                    const imageX = (NODE_WIDTH - imageSize) / 2; // Center horizontally
+                    const imageY = 5; // A bit of padding at the top
+                    image.setAttribute('x', imageX); 
+                    image.setAttribute('y', imageY); 
                     image.setAttribute('width', imageSize);
                     image.setAttribute('height', imageSize);
-                    image.setAttribute('class', 'node-image'); // Apply some styling
+                    image.setAttribute('class', 'node-image');
+                    // Calculate center of image relative to nodeGroup's origin for rotation
+                    const imageCenterX = imageX + imageSize / 2;
+                    const imageCenterY = imageY + imageSize / 2;
+                    image.setAttribute('transform', `rotate(${-rotationAngle} ${imageCenterX} ${imageCenterY})`);
                     nodeGroup.appendChild(image);
+                    contentY = imageY + imageSize + 5; // Update contentY to be below the image + a little padding
                 }
 
-                const nameText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                nameText.setAttribute('x', NODE_WIDTH / 2); // Center horizontally
-                nameText.setAttribute('y', textYOffsetName);
-                nameText.textContent = person.name;
-                // Apply inverse rotation around its own calculated position
-                nameText.setAttribute('transform', rotateTextTransform);
-                nodeGroup.appendChild(nameText);
+                const nameFontSize = 12;
+                const yearsFontSize = 12;
+                const nameLineHeight = nameFontSize * 1.2;
+                const yearsLineHeight = yearsFontSize * 1.2;
+
+                const wrappedNameLines = getWrappedText(person.name, NODE_WIDTH - 20, nameFontSize); // 20px for horizontal padding
+
+                const totalTextHeight = (wrappedNameLines.length * nameLineHeight) + yearsLineHeight;
+
+                // Calculate the starting Y for the text block to center it vertically within the remaining space
+                let textBlockStartY = contentY + (person.actualNodeHeight - contentY - totalTextHeight) / 2;
+                if (textBlockStartY < contentY) textBlockStartY = contentY; // Ensure it doesn't go too high
+
+                wrappedNameLines.forEach((lineText, index) => {
+                    const nameText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    const nameTextX = NODE_WIDTH / 2; // Center horizontally
+                    const nameTextY = textBlockStartY + (index * nameLineHeight) + (nameLineHeight / 2); // Vertically center each line
+                    nameText.setAttribute('x', nameTextX); 
+                    nameText.setAttribute('y', nameTextY); 
+                    nameText.textContent = lineText;
+                    nameText.setAttribute('class', 'name-text'); 
+                    // Calculate center of text line relative to nodeGroup's origin for rotation
+                    nameText.setAttribute('transform', `rotate(${-rotationAngle} ${nameTextX} ${nameTextY})`);
+                    nodeGroup.appendChild(nameText);
+                });
 
                 const yearsText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                yearsText.setAttribute('x', NODE_WIDTH / 2); // Center horizontally
-                yearsText.setAttribute('y', textYOffsetYears); // Further down
+                const yearsTextX = NODE_WIDTH / 2; // Center horizontally
+                const yearsTextY = textBlockStartY + (wrappedNameLines.length * nameLineHeight) + (yearsLineHeight / 2); // Position after wrapped names
+                yearsText.setAttribute('x', yearsTextX); 
+                yearsText.setAttribute('y', yearsTextY); 
                 yearsText.textContent = `${person.birthYear} - ${person.deathYear || 'Present'}`;
-                // Apply inverse rotation around its own calculated position
-                yearsText.setAttribute('transform', rotateTextTransform);
+                // Calculate center of text line relative to nodeGroup's origin for rotation
+                yearsText.setAttribute('transform', `rotate(${-rotationAngle} ${yearsTextX} ${yearsTextY})`);
                 nodeGroup.appendChild(yearsText);
 
                 svg.appendChild(nodeGroup);
@@ -1086,37 +1271,134 @@
             svg.onclick = clearSelection;
         }
 
+        // Helper to parse CSV content into family array
+        function parseCsvContent(content) {
+            const lines = content.split('\n').filter(line => line.trim() !== '');
 
-        function exportToCsv() {
-            if (family.length === 0) {
-                alert('No family data to export.');
+            if (lines.length < 2) {
+                console.warn('CSV file is empty or malformed.');
+                return { family: [], maxIdNum: 0 };
+            }
+
+            const parseCsvLine = (line) => {
+                const values = [];
+                let inQuote = false;
+                let currentVal = '';
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    if (char === '"') {
+                        if (i + 1 < line.length && line[i + 1] === '"') { // Escaped double quote
+                            currentVal += '"';
+                            i++; // Skip the next quote
+                        } else {
+                            inQuote = !inQuote;
+                        }
+                    } else if (char === ',' && !inQuote) {
+                        values.push(currentVal);
+                        currentVal = '';
+                    } else {
+                        currentVal += char;
+                    }
+                }
+                values.push(currentVal); // Add the last value
+                return values.map(v => v.trim()); // Trim whitespace
+            };
+
+            const headers = parseCsvLine(lines[0]);
+            if (!headers.includes('ID') || !headers.includes('Name') || !headers.includes('BirthYear')) {
+                console.error('CSV must contain "ID", "Name", and "BirthYear" columns.');
+                return { family: [], maxIdNum: 0 };
+            }
+
+            const newFamily = [];
+            let maxIdNum = 0;
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = parseCsvLine(lines[i]);
+                if (values.length !== headers.length) {
+                     console.warn(`Skipping malformed row (column count mismatch): ${lines[i]}`);
+                     continue;
+                }
+
+                const person = {};
+                headers.forEach((header, index) => {
+                    const value = values[index];
+                    if (header === 'ID') {
+                        person.id = value;
+                        const num = parseInt(value.substring(1));
+                        if (!isNaN(num)) maxIdNum = Math.max(maxIdNum, num);
+                    } else if (header === 'Name') {
+                        person.name = value;
+                    } else if (header === 'BirthYear') {
+                        person.birthYear = parseInt(value);
+                        if (isNaN(person.birthYear)) person.birthYear = null;
+                    } else if (header === 'DeathYear') {
+                        person.deathYear = value ? parseInt(value) : null;
+                    } else if (header === 'Parent1ID') {
+                        person.parent1Id = value || null;
+                    } else if (header === 'Parent2ID') {
+                        person.parent2Id = value || null;
+                    } else if (header === 'ImageURL') {
+                        person.imageUrl = value || null;
+                    } else if (header === 'XPosition') {
+                        person.x = value ? parseFloat(value) : null;
+                    }
+                });
+
+                if (person.id && person.name && person.birthYear !== null && !isNaN(person.birthYear)) {
+                    newFamily.push(person);
+                } else {
+                    console.warn('Skipping incomplete or invalid person data from CSV:', person);
+                }
+            }
+            return { family: newFamily, maxIdNum: maxIdNum };
+        }
+
+        async function loadFamilyFromURL(url) {
+            if (!url) {
+                console.log("No example family selected.");
+                clearTree(); // Clear existing tree if no selection
                 return;
             }
-
-            let csvContent = "ID,Name,BirthYear,DeathYear,Parent1ID,Parent2ID,ImageURL,XPosition\n"; // Added Parent2ID
-            family.forEach(person => {
-                const deathYear = person.deathYear !== null ? person.deathYear : '';
-                const parent1Id = person.parent1Id !== null ? person.parent1Id : '';
-                const parent2Id = person.parent2Id !== null ? person.parent2Id : ''; // New parent ID
-                const xPosition = person.x !== null ? person.x : '';
-                // Escape double quotes in name and image URL if they exist, then wrap in quotes
-                const nameEscaped = `"${person.name.replace(/"/g, '""')}"`;
-                const imageUrlEscaped = person.imageUrl ? `"${person.imageUrl.replace(/"/g, '""')}"` : '';
+            
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const csvContent = await response.text();
                 
-                csvContent += `${person.id},${nameEscaped},${person.birthYear},${deathYear},${parent1Id},${parent2Id},${imageUrlEscaped},${xPosition}\n`;
-            });
-
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            if (link.download !== undefined) { // Feature detection
-                const url = URL.createObjectURL(blob);
-                link.setAttribute('href', url);
-                link.setAttribute('download', 'family_tree.csv');
-                link.style.visibility = 'hidden';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+                const parsedData = parseCsvContent(csvContent);
+                if (parsedData.family.length > 0) {
+                    family = parsedData.family;
+                    nextPersonId = parsedData.maxIdNum + 1;
+                    updateParentSelect();
+                    drawFamilyTree();
+                    resetFormAndSelection();
+                    showMessage(`'${url.split('/').pop().replace('_family.csv', '').replace(/_/g, ' ')}' family loaded successfully!`);
+                } else {
+                    alert(`Failed to load or parse data from ${url}.`);
+                    clearTree();
+                }
+            } catch (error) {
+                console.error('Error loading family data:', error);
+                alert(`Could not load family data from ${url}. Make sure the file exists and is accessible.`);
+                clearTree();
             }
+        }
+
+        function loadFamilyFromSelectedExample() {
+            const selectElement = document.getElementById('exampleFamilySelect');
+            const filename = selectElement.value; // e.g., "cleopatra_family.csv"
+            
+            if (filename) {
+                loadFamilyFromURL(filename);
+            } else {
+                clearTree(); // If "Load Example Family" (empty value) is selected
+            }
+            // Reset dropdown to default "Load Example Family" after selection
+            // This allows re-selecting the same family or choosing another.
+            selectElement.value = ""; 
         }
 
         function importFromCsv() {
@@ -1131,104 +1413,100 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 const content = e.target.result;
-                const lines = content.split('\n').filter(line => line.trim() !== ''); // Filter empty lines
-
-                if (lines.length < 2) {
-                    alert('CSV file is empty or malformed.');
-                    return;
+                const parsedData = parseCsvContent(content); 
+                
+                if (parsedData.family.length > 0) {
+                    family = parsedData.family;
+                    nextPersonId = parsedData.maxIdNum + 1;
+                    updateParentSelect();
+                    drawFamilyTree();
+                    resetFormAndSelection();
+                    showMessage('Family tree imported successfully!');
+                } else {
+                    alert('Failed to import family tree from CSV.');
                 }
-
-                // A robust CSV parser for values that might contain commas or escaped quotes
-                const parseCsvLine = (line) => {
-                    const values = [];
-                    let inQuote = false;
-                    let currentVal = '';
-                    for (let i = 0; i < line.length; i++) {
-                        const char = line[i];
-                        if (char === '"') {
-                            if (i + 1 < line.length && line[i + 1] === '"') { // Escaped double quote
-                                currentVal += '"';
-                                i++; // Skip the next quote
-                            } else {
-                                inQuote = !inQuote;
-                            }
-                        } else if (char === ',' && !inQuote) {
-                            values.push(currentVal);
-                            currentVal = '';
-                        } else {
-                            currentVal += char;
-                        }
-                    }
-                    values.push(currentVal); // Add the last value
-                    return values.map(v => v.trim()); // Trim whitespace
-                };
-
-
-                const headers = parseCsvLine(lines[0]);
-                if (!headers.includes('ID') || !headers.includes('Name') || !headers.includes('BirthYear')) {
-                    alert('CSV must contain "ID", "Name", and "BirthYear" columns.');
-                    return;
-                }
-
-                const newFamily = [];
-                let maxIdNum = 0;
-
-                for (let i = 1; i < lines.length; i++) {
-                    const values = parseCsvLine(lines[i]);
-                    // Check if the number of values matches the number of headers
-                    // This is a basic check; robust CSV parsing for varying column counts is more complex
-                    // and might require more sophisticated libraries or error handling.
-                    if (values.length !== headers.length) {
-                         console.warn(`Skipping malformed row (column count mismatch): ${lines[i]}`);
-                         continue;
-                    }
-
-                    const person = {};
-                    headers.forEach((header, index) => {
-                        const value = values[index];
-                        if (header === 'ID') {
-                            person.id = value;
-                            const num = parseInt(value.substring(1));
-                            if (!isNaN(num)) maxIdNum = Math.max(maxIdNum, num);
-                        } else if (header === 'Name') {
-                            person.name = value;
-                        } else if (header === 'BirthYear') {
-                            person.birthYear = parseInt(value);
-                            if (isNaN(person.birthYear)) person.birthYear = null; // Mark invalid
-                        } else if (header === 'DeathYear') {
-                            person.deathYear = value ? parseInt(value) : null;
-                        } else if (header === 'Parent1ID') {
-                            person.parent1Id = value || null;
-                        } else if (header === 'Parent2ID') { // Handle Parent2ID
-                            person.parent2Id = value || null;
-                        } else if (header === 'ImageURL') {
-                            person.imageUrl = value || null;
-                        } else if (header === 'XPosition') { // Handle XPosition
-                            person.x = value ? parseFloat(value) : null;
-                        }
-                    });
-
-                    if (person.id && person.name && person.birthYear !== null && !isNaN(person.birthYear)) {
-                        newFamily.push(person);
-                    } else {
-                        console.warn('Skipping incomplete or invalid person data from CSV:', person);
-                    }
-                }
-
-                family = newFamily;
-                nextPersonId = maxIdNum + 1;
-                updateParentSelect();
-                drawFamilyTree();
-                resetFormAndSelection();
-                showMessage('Family tree imported successfully!');
             };
 
             reader.readAsText(file);
             fileInput.value = ''; // Clear the file input
         }
 
+        // --- New Function: Export to CSV ---
+        function exportToCsv() {
+            if (family.length === 0) {
+                alert('No family data to export.');
+                return;
+            }
+
+            const headers = ["ID", "Name", "BirthYear", "DeathYear", "Parent1ID", "Parent2ID", "ImageURL", "XPosition"];
+            // Quote headers to handle potential commas in header names (though not strictly needed here)
+            let csvContent = headers.map(header => `"${header}"`).join(',') + '\n';
+
+            family.forEach(person => {
+                const row = headers.map(header => {
+                    let value;
+                    switch (header) {
+                        case "ID":
+                            value = person.id;
+                            break;
+                        case "Name":
+                            value = person.name;
+                            break;
+                        case "BirthYear":
+                            value = person.birthYear;
+                            break;
+                        case "DeathYear":
+                            value = person.deathYear;
+                            break;
+                        case "Parent1ID":
+                            value = person.parent1Id;
+                            break;
+                        case "Parent2ID":
+                            value = person.parent2Id;
+                            break;
+                        case "ImageURL":
+                            value = person.imageUrl;
+                            break;
+                        case "XPosition":
+                            value = person.x;
+                            break;
+                        default:
+                            value = ''; // Should not happen with defined headers
+                    }
+
+                    // Convert null/undefined to empty string for CSV, and ensure it's a string for processing
+                    let stringValue = (value === null || typeof value === 'undefined') ? '' : String(value);
+
+                    // Escape double quotes by replacing them with two double quotes, and wrap in quotes if value contains comma or double quote
+                    if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) { // Added newline check for robustness
+                        return `"${stringValue.replace(/"/g, '""')}"`;
+                    }
+                    return stringValue;
+                }).join(',');
+                csvContent += row + '\n';
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            if (link.download !== undefined) { // Feature detection for download attribute
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', 'family_tree.csv');
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                showMessage('Family tree exported to CSV!');
+            } else {
+                alert('Your browser does not support downloading files directly. Please copy the text below:\n\n' + csvContent);
+            }
+        }
+        // --- End New Function: Export to CSV ---
+
+
         function saveAsJpg() {
-            const treeContainer = document.querySelector('.tree-container'); // Capture the entire container to get background, padding, etc.
+            const treeContainer = document.querySelector('.tree-container'); 
 
             if (!treeContainer || family.length === 0) {
                 alert("No tree to save or SVG element not found.");
@@ -1239,10 +1517,7 @@
             const selectedNode = document.querySelector('.person-node.selected');
             if (selectedNode) selectedNode.classList.remove('selected');
 
-            // dom-to-image might have issues with SVG elements specifically (foreignObject, images etc.)
-            // The library converts a DOM node to an image. The SVG itself is part of the DOM.
-            // It generally works by rendering to canvas.
-            domtoimage.toJpeg(treeContainer, { quality: 0.95, bgcolor: '#2b2b2b' }) // Set background explicitly
+            domtoimage.toJpeg(treeContainer, { quality: 0.95, bgcolor: '#2b2b2b' }) 
                 .then(function (dataUrl) {
                     const link = document.createElement('a');
                     link.download = 'family_tree.jpg';
@@ -1265,8 +1540,6 @@
 
         // Initial setup
         document.addEventListener('DOMContentLoaded', () => {
-            loadExampleFamily(); // Load example family on page load
-            
             // Set slider values and update displays
             document.getElementById('zoomSlider').value = pixelsPerYear;
             document.getElementById('currentZoom').textContent = `${pixelsPerYear.toFixed(1)}x`;
@@ -1274,10 +1547,25 @@
             document.getElementById('imageSizeInput').value = imageSize;
             document.getElementById('currentImageSize').textContent = `${imageSize}px`;
 
+            // Initialize background image sliders and style
+            document.getElementById('bgSizeSlider').value = backgroundSize;
+            document.getElementById('currentBgSize').textContent = `${backgroundSize}%`;
+            document.getElementById('bgPosXSlider').value = backgroundPosX;
+            document.getElementById('currentBgPosX').textContent = `${backgroundPosX}%`;
+            document.getElementById('bgPosYSlider').value = backgroundPosY;
+            document.getElementById('currentBgPosY').textContent = `${bgPosY}%`;
+            updateBackgroundStyle(); // Apply initial background settings
+
+            // Initialize tree scale slider
+            document.getElementById('treeScaleSlider').value = treeScale;
+            document.getElementById('currentTreeScale').textContent = `${treeScale.toFixed(1)}x`;
+            updateTreeScale(); // Apply initial tree scale
+
             // Update TOP_PADDING initially
             TOP_PADDING = imageSize + 10; 
 
             resetFormAndSelection(); // Ensure buttons are initially disabled and form is reset
+            drawFamilyTree(); // Draw an empty tree initially or load a default if desired.
         });
     </script>
 </body>
