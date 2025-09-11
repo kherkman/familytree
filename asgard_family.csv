@@ -1,0 +1,14 @@
+"ID","Name","BirthYear","DeathYear","Parent1ID","Parent2ID","ImageURL","XPosition"
+ODI,Odin,,,,,https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Odin%2C_der_G%C3%B6ttervater.jpg/440px-Odin%2C_der_G%C3%B6ttervater.jpg,575.1701049804688
+FRY,Frigg,,,,,https://static.wikia.nocookie.net/marvelcinematicuniverse/images/c/cd/Frigga_Infobox.png/revision/latest?cb=20211103194205,324.4706115722656
+THO,Thor,,,ODI,,https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/Thor_by_Donald_Edwin_Blanchette.jpg/440px-Thor_by_Donald_Edwin_Blanchette.jpg,164.91250610351562
+LOK,Loki,,,,,https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Loki_by_Donald_Edwin_Blanchette.jpg/440px-Loki_by_Donald_Edwin_Blanchette.jpg,954
+BAL,Baldur,,,ODI,FRY,https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Baldur_by_Donald_Edwin_Blanchette.jpg/440px-Baldur_by_Donald_Edwin_Blanchette.jpg,379.6748962402344
+HOD,Hodr,,,ODI,FRY,https://static.wikia.nocookie.net/marveldatabase/images/3/3e/Hoder_%28Earth-616%29.png/revision/latest?cb=20170225030404,773.3623657226562
+TYR,Tyr,,,ODI,,https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Tyr_by_Donald_Edwin_Blanchette.jpg/440px-Tyr_by_Donald_Edwin_Blanchette.jpg,573.2135620117188
+HEL,Hel,,,LOK,,https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Hel_by_Donald_Edwin_Blanchette.jpg/440px-Hel_by_Donald_Edwin_Blanchette.jpg,1085.3967895507812
+FEN,Fenrir,,,LOK,,https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Fenrir_by_Donald_Edwin_Blanchette.jpg/440px-Fenrir_by_Donald_Edwin_Blanchette.jpg,1289.9229736328125
+JOR,Jormungandr,,,LOK,,https://static.wikia.nocookie.net/marveldatabase/images/7/7a/Jormungand_%28Earth-616%29.png/revision/latest?cb=20170225030433,1485.2778854370117
+MOD,Modi,,,THO,,,257.7807583808899
+THR,Thrud,,,THO,,,14.441749572753906
+MAG,Magni,,,THO,,,507.79644775390625
