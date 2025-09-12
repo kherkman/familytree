@@ -31,10 +31,64 @@
             width: 90%;
             max-width: 800px;
             display: flex;
+            flex-direction: column; /* Changed to column to stack sections */
+            gap: 20px; /* Space between sections */
+        }
+
+        .control-section { /* NEW: Styling for individual control sections */
+            background-color: #444;
+            padding: 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            /* Changed to column to properly manage content visibility */
+            flex-direction: column; 
+            align-items: flex-start; /* Align items to start for h3 and content */
+        }
+
+        .control-section h3 { /* NEW: Section headings */
+            color: #ffa500;
+            width: 100%;
+            text-align: left; /* Align text to left */
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+            cursor: pointer; /* Indicate it's clickable */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .toggle-icon {
+            font-size: 0.8em;
+            margin-left: 10px;
+            transition: transform 0.2s ease;
+        }
+
+        .control-section.collapsed .toggle-icon {
+            transform: rotate(-90deg);
+        }
+
+        .control-section-content {
+            display: flex;
             flex-wrap: wrap;
             gap: 15px;
             justify-content: center;
             align-items: center;
+            width: 100%; /* Ensure content takes full width */
+            overflow: hidden;
+            max-height: 500px; /* Arbitrary max-height for transition */
+            opacity: 1;
+            transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+            pointer-events: auto; /* Allow interactions */
+        }
+
+        .control-section.collapsed .control-section-content {
+            max-height: 0;
+            opacity: 0;
+            pointer-events: none; /* Disable interactions when collapsed */
         }
 
         .controls input[type="text"],
@@ -105,8 +159,41 @@
             color: #bbb;
         }
 
+        /* Color picker styling */
+        .controls input[type="color"] {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            border: none;
+            width: 40px; /* Smaller width for color picker */
+            height: 28px; /* Adjusted height */
+            padding: 0;
+            border-radius: 4px;
+            background-color: transparent;
+            cursor: pointer;
+            vertical-align: middle; /* Align with text */
+        }
+
+        .controls input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+
+        .controls input[type="color"]::-webkit-color-swatch {
+            border: 1px solid #555;
+            border-radius: 3px;
+        }
+
+        .controls input[type="color"]::-moz-color-swatch-wrapper {
+            padding: 0;
+        }
+
+        .controls input[type="color"]::-moz-color-swatch {
+            border: 1px solid #555;
+            border-radius: 3px;
+        }
+
         .tree-container {
-            background-color: #2b2b2b;
+            background-color: #2b2b2b; /* Default background, will be overridden by JS */
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             padding: 20px;
@@ -130,9 +217,9 @@
             transform-origin: center center; /* Rotate and scale around its center */
         }
 
-        .person-node rect {
-            fill: #444;
-            stroke: #ffa500;
+        .person-node rect, .person-node circle {
+            fill: #444; /* Default box color, will be overridden by JS */
+            stroke: #ffa500; /* Default box line color, will be overridden by JS */
             stroke-width: 2;
             rx: 5;
             ry: 5;
@@ -140,19 +227,19 @@
             cursor: grab; /* Indicate draggable */
         }
 
-        .person-node.dragging rect {
+        .person-node.dragging rect, .person-node.dragging circle {
             cursor: grabbing;
         }
 
-        .person-node.selected rect {
+        .person-node.selected rect, .person-node.selected circle {
             stroke: #00bfff; /* Highlight selected node with blue */
             stroke-width: 3;
         }
 
         .person-node text {
-            fill: #f0f0f0;
-            font-size: 12px;
-            text-anchor: middle;
+            fill: #f0f0f0; /* Default text color, will be overridden by JS */
+            font-size: 12px; /* Default font size, will be overridden by JS */
+            text-anchor: middle; /* NEW: Centered text */
             pointer-events: none; /* Allow click/drag to pass to the group */
         }
         
@@ -163,15 +250,14 @@
 
         .person-node .node-image {
             object-fit: cover; /* Cover the area */
-            stroke: #ffa500;
-            stroke-width: 1;
-            border-radius: 50%; /* Make images round */
+            stroke: none; /* No stroke on image itself, as clipPath will define border */
+            border-radius: 50%; /* Make images round (if not clipped, this would apply) */
             pointer-events: none; /* Allow click/drag to pass to the group */
         }
 
         .person-line {
-            stroke: #ffa500;
-            stroke-width: 2;
+            stroke: #ffa500; /* Default line color, will be overridden by JS */
+            stroke-width: 2; /* Default line thickness, will be overridden by JS */
             fill: none;
         }
 
@@ -188,8 +274,8 @@
         }
 
         .year-label {
-            fill: #f0f0f0;
-            font-size: 12px;
+            fill: #f0f0f0; /* Default year label color, will be overridden by JS */
+            font-size: 12px; /* Default year label size, will be overridden by JS */
             text-anchor: end;
         }
 
@@ -200,7 +286,7 @@
         .tooltip {
             position: absolute;
             background-color: #333;
-            color: #f0f0f0;
+            color: #f0f0f0; /* Default tooltip text color, will be overridden by JS */
             padding: 8px 12px;
             border-radius: 4px;
             pointer-events: none; /* Allows clicks to pass through to elements below */
@@ -208,8 +294,8 @@
             transition: opacity 0.2s ease;
             white-space: nowrap;
             z-index: 10;
-            border: 1px solid #ffa500;
-            font-size: 13px;
+            border: 1px solid #ffa500; /* Default border color, will be overridden by JS */
+            font-size: 13px; /* Default tooltip font size, will be overridden by JS */
             transform: translateX(-50%); /* Center horizontally */
         }
 
@@ -299,7 +385,7 @@
             overflow-y: auto;
             margin-bottom: 20px;
             border: 1px solid #555;
-            border-radius: 4px;
+            border-radius: 44px;
         }
 
         #familyDataTable {
@@ -332,6 +418,11 @@
 
         #familyDataTable tbody tr:hover {
             background-color: #4a4a4a;
+        }
+        
+        #familyDataTable tbody tr.selected-row {
+            background-color: #007bff; /* Highlight color for selected row */
+            color: white;
         }
 
         #familyDataTable [contenteditable="true"] {
@@ -372,78 +463,178 @@
     <h1>Family Tree Maker</h1>
 
     <div class="controls">
-        <input type="text" id="personName" placeholder="Name" required>
-        <input type="number" id="birthYear" placeholder="Birth Year" min="-100000" max="100000">
-        <input type="number" id="deathYear" placeholder="Death Year (optional)" min="-100000" max="100000">
-        <select id="parent1Select">
-            <option value="">Parent 1 (None)</option>
-        </select>
-        <select id="parent2Select">
-            <option value="">Parent 2 (None)</option>
-        </select>
-        <button id="addUpdateBtn" onclick="addUpdatePerson()">Add Person</button>
-        <button onclick="exportToCsv()">Export to CSV</button>
-        <input type="file" id="importCsvFile" accept=".csv" class="hidden-file-input" onchange="importFromCsv()">
-        <button onclick="document.getElementById('importCsvFile').click()">Import from CSV</button>
-        
-        <!-- Image URL Input & Button -->
-        <input type="text" id="imageUrlInput" placeholder="Image URL">
-        <button id="linkImageBtn" onclick="linkImage()" disabled>Link Image</button>
 
-        <input type="file" id="imageFileInput" accept="image/*" class="hidden-file-input" onchange="handleImageUpload()">
-        <button id="loadImageBtn" onclick="document.getElementById('imageFileInput').click()" disabled>Load Image</button>
-        <button id="removeImageBtn" onclick="removeImage()" disabled>Remove Image</button>
+        <div class="control-section">
+            <h3 onclick="toggleSection(this)">File Operations <span class="toggle-icon">▼</span></h3>
+            <div class="control-section-content">
+                <button onclick="exportToCsv()">Export to CSV</button>
+                <input type="file" id="importCsvFile" accept=".csv" class="hidden-file-input" onchange="importFromCsv()">
+                <button onclick="document.getElementById('importCsvFile').click()">Import from CSV</button>
+                <select id="exampleFamilySelect" onchange="loadFamilyFromSelectedExample()">
+                    <option value="">Load Example Family</option>
+                    <option value="cleopatra_family.csv">Cleopatra</option>
+                    <option value="queen_victoria_family.csv">Queen Victoria</option>
+                    <option value="asgard_family.csv">Asgard</option>
+                </select>
+                <button onclick="clearTree()">Clear Tree</button>
+                <button onclick="openEditTableModal()">Edit as Table</button>
+            </div>
+        </div>
 
-        <button onclick="saveAsJpg()">Save to JPG</button>
-        
-        <label for="zoomSlider">Zoom:</label>
-        <input type="range" id="zoomSlider" min="1" max="10" value="3" step="0.5" onchange="updateZoom()" oninput="updateZoom()">
-        <span id="currentZoom" class="zoom-label">3.0x</span>
-        
-        <label for="imageSizeInput">Image Size:</label>
-        <input type="range" id="imageSizeInput" min="10" max="100" value="40" step="5" onchange="updateImageSize()" oninput="updateImageSize()">
-        <span id="currentImageSize" class="zoom-label">40px</span>
+        <div class="control-section">
+            <h3 onclick="toggleSection(this)">Person Data & Actions <span class="toggle-icon">▼</span></h3>
+            <div class="control-section-content">
+                <input type="text" id="personName" placeholder="Name" required>
+                <input type="number" id="birthYear" placeholder="Birth Year" min="-100000" max="100000">
+                <input type="number" id="deathYear" placeholder="Death Year (optional)" min="-100000" max="100000">
+                <select id="parent1Select">
+                    <option value="">Parent 1 (None)</option>
+                </select>
+                <select id="parent2Select">
+                    <option value="">Parent 2 (None)</option>
+                </select>
+                <button id="addUpdateBtn" onclick="addUpdatePerson()">Add Person</button>
+                <button id="removePersonBtn" onclick="removePerson()" disabled>Remove Person</button>
+            </div>
+        </div>
 
-        <button onclick="toggleLifelines()">Toggle Lifelines</button>
-        <button onclick="rotateTree()">Rotate Tree</button>
-        <button id="removePersonBtn" onclick="removePerson()" disabled>Remove Person</button>
-        <button onclick="toggleYearLines()">Toggle Year Lines</button>
-        <!-- Dropdown for example families -->
-        <select id="exampleFamilySelect" onchange="loadFamilyFromSelectedExample()">
-            <option value="">Load Example Family</option>
-            <option value="cleopatra_family.csv">Cleopatra</option>
-            <option value="queen_victoria_family.csv">Queen Victoria</option>
-            <option value="asgard_family.csv">Asgard</option>
-        </select>
-        <button onclick="clearTree()">Clear Tree</button>
+        <div class="control-section">
+            <h3 onclick="toggleSection(this)">Image Management <span class="toggle-icon">▼</span></h3>
+            <div class="control-section-content">
+                <input type="text" id="imageUrlInput" placeholder="Image URL">
+                <button id="linkImageBtn" onclick="linkImage()" disabled>Link Image</button>
+                <input type="file" id="imageFileInput" accept="image/*" class="hidden-file-input" onchange="handleImageUpload()">
+                <button id="loadImageBtn" onclick="document.getElementById('imageFileInput').click()" disabled>Load Image</button>
+                <button id="removeImageBtn" onclick="removeImage()" disabled>Remove Image</button>
+            </div>
+        </div>
 
-        <!-- Tree Scale Slider -->
-        <label for="treeScaleSlider">Tree Scale:</label>
-        <input type="range" id="treeScaleSlider" min="0.5" max="2.0" value="1.0" step="0.1" onchange="updateTreeScale()" oninput="updateTreeScale()">
-        <span id="currentTreeScale" class="zoom-label">1.0x</span>
+        <div class="control-section">
+            <h3 onclick="toggleSection(this)">Tree View & Layout <span class="toggle-icon">▼</span></h3>
+            <div class="control-section-content">
+                <label for="verticalDistanceSlider">Vertical Distance:</label>
+                <input type="range" id="verticalDistanceSlider" min="1" max="100" value="8" step="0.5" onchange="updateVerticalDistance()" oninput="updateVerticalDistance()">
+                <span id="currentVerticalDistance" class="zoom-label">3.0x</span>
+                
+                <label for="imageSizeInput">Image Size:</label>
+                <input type="range" id="imageSizeInput" min="10" max="1000" value="40" step="5" onchange="updateImageSize()" oninput="updateImageSize()">
+                <span id="currentImageSize" class="zoom-label">40px</span>
 
-        <!-- Background Image Controls -->
-        <input type="file" id="bgImageFileInput" accept="image/*" class="hidden-file-input" onchange="handleBackgroundUpload()">
-        <button onclick="document.getElementById('bgImageFileInput').click()">Add Background Image</button>
-        <button id="removeBgImageBtn" onclick="removeBackgroundImage()" disabled>Remove Background Image</button>
-        
-        <label for="bgSizeSlider">BG Size:</label>
-        <input type="range" id="bgSizeSlider" min="10" max="200" value="100" step="5" onchange="updateBackgroundStyle()" oninput="updateBackgroundStyle()">
-        <span id="currentBgSize" class="zoom-label">100%</span>
-        
-        <label for="bgPosXSlider">BG Pos X:</label>
-        <input type="range" id="bgPosXSlider" min="-200" max="200" value="0" step="1" onchange="updateBackgroundStyle()" oninput="updateBackgroundStyle()">
-        <span id="currentBgPosX" class="zoom-label">0%</span>
-        
-        <label for="bgPosYSlider">BG Pos Y:</label>
-        <input type="range" id="bgPosYSlider" min="-200" max="200" value="0" step="1" onchange="updateBackgroundStyle()" oninput="updateBackgroundStyle()">
-        <span id="currentBgPosY" class="zoom-label">0%</span>
+                <label for="treeScaleSlider">Tree Scale:</label>
+                <input type="range" id="treeScaleSlider" min="0.5" max="20.0" value="1.0" step="0.1" onchange="updateTreeScale()" oninput="updateTreeScale()">
+                <span id="currentTreeScale" class="zoom-label">1.0x</span>
 
-        <!-- New: Edit as Table Button -->
-        <button onclick="openEditTableModal()">Edit as Table</button>
+                <button onclick="toggleLifelines()">Toggle Lifelines</button>
+                <button onclick="toggleYearLines()">Toggle Year Lines</button>
+                <button onclick="rotateTree()">Rotate Tree</button>
+                <button onclick="saveAsJpg()">Save to JPG</button>
+            </div>
+        </div>
+
+        <div class="control-section">
+            <h3 onclick="toggleSection(this)">Background Customization <span class="toggle-icon">▼</span></h3>
+            <div class="control-section-content">
+                <input type="file" id="bgImageFileInput" accept="image/*, .gif" class="hidden-file-input" onchange="handleBackgroundUpload()">
+                <button onclick="document.getElementById('bgImageFileInput').click()">Add Background Image</button>
+                <button id="removeBgImageBtn" onclick="removeBackgroundImage()" disabled>Remove Background Image</button>
+                
+                <label for="bgSizeSlider">BG Size:</label>
+                <input type="range" id="bgSizeSlider" min="10" max="200" value="100" step="5" onchange="updateBackgroundStyle()" oninput="updateBackgroundStyle()">
+                <span id="currentBgSize" class="zoom-label">100%</span>
+                
+                <label for="bgPosXSlider">BG Pos X:</label>
+                <input type="range" id="bgPosXSlider" min="-200" max="200" value="0" step="1" onchange="updateBackgroundStyle()" oninput="updateBackgroundStyle()">
+                <span id="currentBgPosX" class="zoom-label">0%</span>
+                
+                <label for="bgPosYSlider">BG Pos Y:</label>
+                <input type="range" id="bgPosYSlider" min="-200" max="200" value="0" step="1" onchange="updateBackgroundStyle()" oninput="updateBackgroundStyle()">
+                <span id="currentBgPosY" class="zoom-label">0%</span>
+
+                <label for="treeBgColorPicker">BG Color:</label>
+                <input type="color" id="treeBgColorPicker" value="#2b2b2b" onchange="updateTreeBgColor()">
+            </div>
+        </div>
+
+        <div class="control-section">
+            <h3 onclick="toggleSection(this)">Text Customization <span class="toggle-icon">▼</span></h3>
+            <div class="control-section-content">
+                <label for="fontSizeSlider">Font Size:</label>
+                <input type="range" id="fontSizeSlider" min="8" max="300" value="18" step="1" onchange="updateFontSize()" oninput="updateFontSize()">
+                <span id="currentFontSize" class="zoom-label">12px</span>
+
+                <label for="fontColorPicker">Font Color:</label>
+                <input type="color" id="fontColorPicker" value="#f0f0f0" onchange="updateFontColor()">
+
+                <label for="fontBgColorPicker">Font BG Color:</label>
+                <input type="color" id="fontBgColorPicker" value="#00000000" onchange="updateFontBackgroundColor()">
+                <button id="removeFontBgColorBtn" onclick="removeFontBackgroundColor()">Remove Font BG Color</button>
+
+                <input type="text" id="fontFamilyInput" placeholder="Font Name (e.g., Arial, 'Times New Roman')">
+                <button id="loadFontBtn" onclick="loadFontFamily()">Load Font</button>
+
+                <label for="verticalTextOffsetSlider">Text Vert. Offset:</label>
+                <input type="range" id="verticalTextOffsetSlider" min="-50" max="50" value="0" step="1" onchange="updateVerticalTextOffset()" oninput="updateVerticalTextOffset()">
+                <span id="currentVerticalTextOffset" class="zoom-label">0px</span>
+
+                <label for="textHorizontalOffsetSlider">Text Horiz. Offset:</label>
+                <input type="range" id="textHorizontalOffsetSlider" min="-100" max="100" value="0" step="1" onchange="updateTextHorizontalOffset()" oninput="updateTextHorizontalOffset()">
+                <span id="currentTextHorizontalOffset" class="zoom-label">0px</span>
+            </div>
+        </div>
+
+        <div class="control-section">
+            <h3 onclick="toggleSection(this)">Box Customization <span class="toggle-icon">▼</span></h3>
+            <div class="control-section-content">
+                <label for="boxColorPicker">Box Fill:</label>
+                <input type="color" id="boxColorPicker" value="#444444" onchange="updateBoxColor()">
+
+                <label for="boxLineColorPicker">Box Line:</label>
+                <input type="color" id="boxLineColorPicker" value="#ffa500" onchange="updateBoxLineColor()">
+
+                <label for="lineColorPicker">Line Color:</label>
+                <input type="color" id="lineColorPicker" value="#ffa500" onchange="updateLineColor()">
+
+                <label for="lineThicknessSlider">Line Thickness:</label>
+                <input type="range" id="lineThicknessSlider" min="1" max="10" value="2" step="0.5" onchange="updateLineThickness()" oninput="updateLineThickness()">
+                <span id="currentLineThickness" class="zoom-label">2.0px</span>
+
+                <label for="boxRectWidthSlider">Box Width:</label>
+                <input type="range" id="boxRectWidthSlider" min="100" max="300" value="180" step="10" onchange="updateBoxRectWidth()" oninput="updateBoxRectWidth()">
+                <span id="currentBoxRectWidth" class="zoom-label">180px</span>
+
+                <label for="boxRectHeightSlider">Rect Height:</label>
+                <input type="range" id="boxRectHeightSlider" min="50" max="300" value="180" step="10" onchange="updateBoxRectHeight()" oninput="updateBoxRectHeight()">
+                <span id="currentBoxRectHeight" class="zoom-label">180px</span>
+
+                <label for="boxShapeSelect">Box Shape:</label>
+                <select id="boxShapeSelect" onchange="updateBoxShape()">
+                    <option value="rectangle">Rectangle</option>
+                    <option value="circle">Circle</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="control-section">
+            <h3 onclick="toggleSection(this)">Application Settings <span class="toggle-icon">▼</span></h3>
+            <div class="control-section-content">
+                <label for="skinSelect">Load Skin:</label>
+                <select id="skinSelect" onchange="loadSkin()">
+                    <option value="">-- Select a Skin --</option>
+                    <option value="defaultDark">Default Dark</option>
+                    <option value="lightClean">Light & Clean</option>
+                    <option value="forestGreen">Forest Green</option>
+                    <option value="oceanBlue">Ocean Blue</option>
+                    <option value="vintageSepia">Vintage Sepia</option>
+                    <option value="modernCircles">Modern Circles</option>
+                </select>
+                <button id="saveSettingsBtn" onclick="saveSettings()">Save Settings</button>
+                <input type="file" id="loadSettingsFileInput" accept=".json" class="hidden-file-input" onchange="handleLoadSettingsFile()">
+                <button id="loadSettingsBtn" onclick="document.getElementById('loadSettingsFileInput').click()">Load Settings</button>
+            </div>
+        </div>
     </div>
 
-    <div class="tree-container">
+    <div class="tree-container" id="treeContainer">
         <svg id="familyTreeSvg"></svg>
         <div id="tooltip" class="tooltip"></div>
     </div>
@@ -474,6 +665,8 @@
                 </table>
             </div>
             <button onclick="saveTableChanges()">Save Changes</button>
+            <button id="deleteSelectedRowBtn" onclick="deleteSelectedRow()" disabled>Delete Selected Row</button>
+            <button onclick="insertNewRow()">Insert Row</button>
             <button onclick="closeEditTableModal()">Close</button>
         </div>
     </div>
@@ -497,15 +690,14 @@
         let treeScale = 1.0; // Scale factor for the entire tree
 
         // Configuration for SVG drawing
-        const NODE_WIDTH = 180; // Changed from 120 to 180 for more text space
-        const MIN_NODE_HEIGHT = 60; // Minimum height for nodes
+        let NODE_WIDTH = 180; // This will be set dynamically based on boxRectWidth
+        const levelSpacingBaseUnit = 40; // Base unit for vertical spacing when no years (e.g., 40px per 'level' at 1x verticalScaleFactor)
         let imageSize = 40; // Initial size for the person's image, now variable
-        let pixelsPerYear = 3; // Initial pixels per year, controlled by slider
+        let verticalScaleFactor = 8; // Controls vertical distance, formerly pixelsPerYear
         const YEAR_LINE_INTERVAL = 10; // Every 10 years
         const HORIZONTAL_SPACING = 30; // Horizontal space between nodes at the same approximate year level
         let TOP_PADDING = imageSize + 10; // Space above the earliest year for images and margin (now dynamic)
         const LIFELINE_OFFSET = 5; // Horizontal offset for the lifeline from the node's right edge
-        const VERTICAL_LEVEL_SPACING = 120; // Consistent vertical space between generations/levels if no years
 
         // Background image variables
         let backgroundImageUrl = null;
@@ -513,8 +705,79 @@
         let backgroundPosX = 0;   // in percentage
         let backgroundPosY = 0;   // in percentage
 
+        // Customization variables
+        let fontSize = 22;
+        let fontColor = '#f0f0f0';
+        let fontBackgroundColor = 'transparent'; // Default font background color (transparent)
+        let fontFamily = 'Arial, sans-serif'; // Default font
+        let boxColor = '#444444';
+        let boxLineColor = '#ffa500'; // Default box line color
+        let lineColor = '#ffa500'; // Default connecting line color
+        let lineThickness = 2; // NEW: Default line thickness
+        let boxRectWidth = 180; // Width for rect, diameter for circle
+        let boxRectHeight = 180; // Height for rectangle boxes
+        let boxShape = 'rectangle'; // 'rectangle' or 'circle'
+        let treeBackgroundColor = '#2b2b2b'; // Default tree container background color
+        let verticalTextOffset = 0; // Vertical offset for text position
+        let textHorizontalOffset = 0; // Horizontal offset for text position
+
+        // Edit Table Modal
+        let selectedTableRow = null; // To track the currently selected row in the modal table
+        let nextTmpId = 1; // For new rows added in the table editor
+
+        // Preset Skins
+        const presetSkins = {
+            defaultDark: {
+                verticalScaleFactor: 3, imageSize: 40, fontSize: 12, fontColor: '#f0f0f0', fontBackgroundColor: 'transparent',
+                fontFamily: 'Arial, sans-serif', boxColor: '#444444', boxLineColor: '#ffa500', lineColor: '#ffa500', lineThickness: 2,
+                boxRectWidth: 180, boxRectHeight: 180, boxShape: 'rectangle', treeBackgroundColor: '#2b2b2b',
+                verticalTextOffset: 0, textHorizontalOffset: 0, showLifelines: false, showYearLines: true,
+                rotationAngle: 0, treeScale: 1.0, backgroundImageUrl: null, backgroundSize: 100, backgroundPosX: 0, backgroundPosY: 0
+            },
+            lightClean: {
+                verticalScaleFactor: 3, imageSize: 50, fontSize: 14, fontColor: '#000000', fontBackgroundColor: '#ffffffcc',
+                fontFamily: 'Verdana, sans-serif', boxColor: '#e0e0e0', boxLineColor: '#6699ff', lineColor: '#6699ff', lineThickness: 2,
+                boxRectWidth: 200, boxRectHeight: 100, boxShape: 'rectangle', treeBackgroundColor: '#f8f8f8',
+                verticalTextOffset: 0, textHorizontalOffset: 0, showLifelines: true, showYearLines: true,
+                rotationAngle: 0, treeScale: 1.0, backgroundImageUrl: null, backgroundSize: 100, backgroundPosX: 0, backgroundPosY: 0
+            },
+            forestGreen: {
+                verticalScaleFactor: 2.5, imageSize: 60, fontSize: 13, fontColor: '#e0ffe0', fontBackgroundColor: '#224422cc',
+                fontFamily: 'Georgia, serif', boxColor: '#3a6a3a', boxLineColor: '#aaffaa', lineColor: '#aaffaa', lineThickness: 3,
+                boxRectWidth: 190, boxRectHeight: 90, boxShape: 'rectangle', treeBackgroundColor: '#2b502b',
+                verticalTextOffset: 0, textHorizontalOffset: 0, showLifelines: true, showYearLines: false,
+                rotationAngle: 0, treeScale: 1.0, backgroundImageUrl: null, backgroundSize: 100, backgroundPosX: 0, backgroundPosY: 0
+            },
+            oceanBlue: {
+                verticalScaleFactor: 3.5, imageSize: 45, fontSize: 12, fontColor: '#e0f2f7', fontBackgroundColor: '#1a4c68cc',
+                fontFamily: '"Trebuchet MS", sans-serif', boxColor: '#2a628f', boxLineColor: '#6fcffb', lineColor: '#6fcffb', lineThickness: 2.5,
+                boxRectWidth: 170, boxRectHeight: 110, boxShape: 'rectangle', treeBackgroundColor: '#1d3e53',
+                verticalTextOffset: 0, textHorizontalOffset: 0, showLifelines: true, showYearLines: true,
+                rotationAngle: 0, treeScale: 1.0, backgroundImageUrl: null, backgroundSize: 100, backgroundPosX: 0, backgroundPosY: 0
+            },
+            vintageSepia: {
+                verticalScaleFactor: 4, imageSize: 55, fontSize: 15, fontColor: '#000000', fontBackgroundColor: '#f8f0e0b3',
+                fontFamily: '"Times New Roman", serif', boxColor: '#d4b79b', boxLineColor: '#8a6e4d', lineColor: '#8a6e4d', lineThickness: 1.5,
+                boxRectWidth: 210, boxRectHeight: 130, boxShape: 'rectangle', treeBackgroundColor: '#f0e6d6',
+                verticalTextOffset: 0, textHorizontalOffset: 0, showLifelines: false, showYearLines: true,
+                rotationAngle: 0, treeScale: 1.0, backgroundImageUrl: null, backgroundSize: 100, backgroundPosX: 0, backgroundPosY: 0
+            },
+            modernCircles: {
+                verticalScaleFactor: 3, imageSize: 70, fontSize: 16, fontColor: '#ffffff', fontBackgroundColor: '#555555cc',
+                fontFamily: '"Open Sans", sans-serif', boxColor: '#666666', boxLineColor: '#cc00ff', lineColor: '#cc00ff', lineThickness: 4,
+                boxRectWidth: 150, boxRectHeight: 150, boxShape: 'circle', treeBackgroundColor: '#3a3a3a',
+                verticalTextOffset: 0, textHorizontalOffset: 0, showLifelines: true, showYearLines: false,
+                rotationAngle: 0, treeScale: 1.0, backgroundImageUrl: null, backgroundSize: 100, backgroundPosX: 0, backgroundPosY: 0
+            }
+        };
+
+
         function generateId() {
             return 'p' + (nextPersonId++);
+        }
+        
+        function generateTmpId() {
+            return 'tmp_p' + (nextTmpId++);
         }
 
         // Show temporary message function
@@ -696,6 +959,10 @@
             document.getElementById('linkImageBtn').disabled = true; // Disable link image button
             document.getElementById('removePersonBtn').disabled = true; // Disable remove person button
             document.getElementById('removeImageBtn').disabled = true; // Disable remove image button on reset
+
+            // Reset font family input (but not the actual value)
+            document.getElementById('fontFamilyInput').value = '';
+            document.getElementById('skinSelect').value = ''; // Reset skin dropdown
         }
 
         function selectPerson(id) {
@@ -823,7 +1090,7 @@
         }
 
         function updateBackgroundStyle() {
-            const treeContainer = document.querySelector('.tree-container');
+            const treeContainer = document.getElementById('treeContainer');
             
             backgroundSize = parseInt(document.getElementById('bgSizeSlider').value);
             backgroundPosX = parseInt(document.getElementById('bgPosXSlider').value);
@@ -843,6 +1110,12 @@
                 treeContainer.style.backgroundSize = 'auto';
                 treeContainer.style.backgroundPosition = '0 0';
             }
+        }
+
+        function updateTreeBgColor() {
+            treeBackgroundColor = document.getElementById('treeBgColorPicker').value;
+            document.getElementById('treeContainer').style.backgroundColor = treeBackgroundColor;
+            // drawFamilyTree(); // No need to redraw, only container style changes
         }
 
         function showParentTooltip(event, personId) {
@@ -866,8 +1139,12 @@
             
             if (tooltipText.length > 0) {
                 tooltip.innerHTML = tooltipText.join('<br>');
+                tooltip.style.color = fontColor; // Apply font color to tooltip
+                tooltip.style.fontSize = `${fontSize * 0.9}px`; // Slightly smaller for tooltip
+                tooltip.style.backgroundColor = boxColor; // Apply box color as tooltip background
+                tooltip.style.borderColor = boxLineColor; // Apply box line color as tooltip border
                 
-                const treeContainerRect = document.querySelector('.tree-container').getBoundingClientRect();
+                const treeContainerRect = document.getElementById('treeContainer').getBoundingClientRect();
                 const nodeRect = event.currentTarget.getBoundingClientRect(); // The SVG 'g' element
                 
                 // Position tooltip slightly above the node, centered horizontally
@@ -883,9 +1160,9 @@
             tooltip.classList.remove('visible');
         }
 
-        function updateZoom() {
-            pixelsPerYear = parseFloat(document.getElementById('zoomSlider').value);
-            document.getElementById('currentZoom').textContent = `${pixelsPerYear.toFixed(1)}x`;
+        function updateVerticalDistance() { // RENAMED FUNCTION
+            verticalScaleFactor = parseFloat(document.getElementById('verticalDistanceSlider').value);
+            document.getElementById('currentVerticalDistance').textContent = `${verticalScaleFactor.toFixed(1)}x`;
             // Recalculate TOP_PADDING based on current imageSize and redraw
             TOP_PADDING = imageSize + 10;
             drawFamilyTree();
@@ -962,6 +1239,105 @@
             drawFamilyTree();
             resetFormAndSelection(); // Clear selection and form
         }
+
+        // Customization functions
+        function updateFontSize() {
+            fontSize = parseInt(document.getElementById('fontSizeSlider').value);
+            document.getElementById('currentFontSize').textContent = `${fontSize}px`;
+            drawFamilyTree();
+        }
+
+        function updateFontColor() {
+            fontColor = document.getElementById('fontColorPicker').value;
+            drawFamilyTree();
+            // Update tooltip color as well
+            document.getElementById('tooltip').style.color = fontColor;
+        }
+
+        function updateFontBackgroundColor() {
+            fontBackgroundColor = document.getElementById('fontBgColorPicker').value;
+            drawFamilyTree();
+        }
+
+        function removeFontBackgroundColor() {
+            fontBackgroundColor = 'transparent';
+            document.getElementById('fontBgColorPicker').value = '#00000000'; // Represents transparent in color pickers
+            drawFamilyTree();
+            showMessage('Font background color removed.');
+        }
+
+        function loadFontFamily() {
+            const input = document.getElementById('fontFamilyInput').value.trim();
+            if (input) {
+                fontFamily = input;
+                drawFamilyTree();
+                showMessage(`Font set to '${fontFamily}'.`);
+            } else {
+                alert('Please enter a font family name.');
+            }
+        }
+
+        function updateVerticalTextOffset() {
+            verticalTextOffset = parseInt(document.getElementById('verticalTextOffsetSlider').value);
+            document.getElementById('currentVerticalTextOffset').textContent = `${verticalTextOffset}px`;
+            drawFamilyTree();
+        }
+
+        function updateTextHorizontalOffset() { // NEW FUNCTION
+            textHorizontalOffset = parseInt(document.getElementById('textHorizontalOffsetSlider').value);
+            document.getElementById('currentTextHorizontalOffset').textContent = `${textHorizontalOffset}px`;
+            drawFamilyTree();
+        }
+
+        function updateBoxColor() {
+            boxColor = document.getElementById('boxColorPicker').value;
+            drawFamilyTree();
+        }
+        
+        function updateBoxLineColor() {
+            boxLineColor = document.getElementById('boxLineColorPicker').value;
+            drawFamilyTree();
+        }
+
+        function updateLineColor() { 
+            lineColor = document.getElementById('lineColorPicker').value;
+            drawFamilyTree();
+        }
+
+        function updateLineThickness() { // NEW FUNCTION
+            lineThickness = parseFloat(document.getElementById('lineThicknessSlider').value);
+            document.getElementById('currentLineThickness').textContent = `${lineThickness.toFixed(1)}px`;
+            drawFamilyTree();
+        }
+
+        function updateBoxRectWidth() {
+            boxRectWidth = parseInt(document.getElementById('boxRectWidthSlider').value);
+            document.getElementById('currentBoxRectWidth').textContent = `${boxRectWidth}px`;
+            drawFamilyTree();
+        }
+
+        function updateBoxRectHeight() {
+            boxRectHeight = parseInt(document.getElementById('boxRectHeightSlider').value);
+            document.getElementById('currentBoxRectHeight').textContent = `${boxRectHeight}px`;
+            drawFamilyTree();
+        }
+
+        function updateBoxShape() {
+            boxShape = document.getElementById('boxShapeSelect').value;
+            drawFamilyTree();
+        }
+
+        function loadSkin() { // NEW FUNCTION
+            const skinName = document.getElementById('skinSelect').value;
+            if (skinName && presetSkins[skinName]) {
+                applySettings(presetSkins[skinName]);
+                showMessage(`Skin "${skinName.replace(/([A-Z])/g, ' $1').trim()}" loaded!`); // Format name for message
+            } else if (skinName) {
+                showMessage('Selected skin not found or invalid.');
+            }
+            document.getElementById('skinSelect').value = ''; // Reset dropdown after selection
+        }
+
 
         // --- Drag and Drop Functions ---
         const svgElement = document.getElementById('familyTreeSvg');
@@ -1053,12 +1429,12 @@
         }
         // --- End Drag and Drop Functions ---
 
-        // Helper function to wrap text within a given width
+        // Helper function to wrap text within a given width (without truncation)
         function getWrappedText(text, maxWidth, fontSize) {
             const svg = document.getElementById('familyTreeSvg');
             const tempText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
             tempText.style.fontSize = `${fontSize}px`;
-            tempText.style.fontFamily = 'Arial, sans-serif'; // Ensure consistent font for measurement
+            tempText.style.fontFamily = fontFamily; // Use current fontFamily for measurement
             svg.appendChild(tempText); 
 
             const words = text.split(' ');
@@ -1078,33 +1454,36 @@
             lines.push(line);
             
             svg.removeChild(tempText); // Remove the temporary text element
+            return lines; // Return all lines without truncation
+        }
 
-            const maxApproxCharsPerLine = Math.floor(maxWidth / (fontSize * 0.6)); // Rough estimate
-            return lines.map(l => {
-                if (l.length > maxApproxCharsPerLine + 5 && l.includes(' ')) { 
-                    const parts = l.split(' ');
-                    let currentTruncated = '';
-                    for (const part of parts) {
-                        if ((currentTruncated + ' ' + part).length <= maxApproxCharsPerLine - 3) {
-                            currentTruncated += (currentTruncated ? ' ' : '') + part;
-                        } else {
-                            break;
-                        }
-                    }
-                    if (currentTruncated !== l && currentTruncated.length > 0) {
-                        return currentTruncated + '...';
-                    }
-                } else if (l.length > maxApproxCharsPerLine * 1.5) { 
-                     return l.substring(0, maxApproxCharsPerLine * 1.5 - 3) + '...';
-                }
-                return l;
-            });
+        // Helper to measure text width
+        function getTextWidth(text, fontSize, fontFamily) {
+            const svg = document.getElementById('familyTreeSvg');
+            const tempText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            tempText.style.fontSize = `${fontSize}px`;
+            tempText.style.fontFamily = fontFamily;
+            tempText.textContent = text;
+            svg.appendChild(tempText);
+            const width = tempText.getComputedTextLength();
+            svg.removeChild(tempText);
+            return width;
         }
 
 
         function drawFamilyTree() {
             const svg = document.getElementById('familyTreeSvg');
             svg.innerHTML = ''; // Clear existing SVG content
+
+            // Determine NODE_WIDTH and actualNodeHeight based on shape and sliders
+            if (boxShape === 'rectangle') {
+                NODE_WIDTH = boxRectWidth;
+            } else { // circle
+                NODE_WIDTH = boxRectWidth; // Circles use width for diameter
+            }
+            // For drawing purposes, actualNodeHeight will be explicitly set based on shape.
+            const nodeDrawingHeight = (boxShape === 'rectangle' ? boxRectHeight : boxRectWidth);
+
 
             if (family.length === 0) {
                 return;
@@ -1123,11 +1502,10 @@
                 maxYear = Math.ceil(maxYear / YEAR_LINE_INTERVAL) * YEAR_LINE_INTERVAL;   // Round up to nearest interval
             }
             
-
             const svgContainerWidth = svg.parentElement.offsetWidth - 40; // Parent width minus padding
             
             // Create a map for easy lookup and to hold layout properties
-            const peopleMap = new Map(family.map(p => [p.id, { ...p, children: [], y: 0, level: 0, actualNodeHeight: MIN_NODE_HEIGHT }]));
+            const peopleMap = new Map(family.map(p => [p.id, { ...p, children: [], y: 0, level: 0, actualNodeHeight: nodeDrawingHeight }]));
 
             // Build child references (a person can have two parents)
             family.forEach(person => {
@@ -1160,45 +1538,6 @@
             }
             rootNodes.forEach(node => assignLevel(node, 0));
 
-            // Calculate node heights based on text wrapping
-            peopleMap.forEach(person => {
-                const nameFontSize = 12;
-                const yearsFontSize = 12;
-                const nameLineHeight = nameFontSize * 1.2;
-                const yearsLineHeight = yearsFontSize * 1.2;
-
-                const wrappedNameLines = getWrappedText(person.name, NODE_WIDTH - 20, nameFontSize); // 20px for horizontal padding
-
-                let yearsContent = '';
-                if (hasYears) {
-                    yearsContent = `${person.birthYear} - ${person.deathYear || 'Present'}`;
-                } else {
-                    if (person.birthYear && person.deathYear) {
-                        yearsContent = `${person.birthYear} - ${person.deathYear}`;
-                    } else if (person.birthYear) {
-                        yearsContent = `Born: ${person.birthYear}`;
-                    } else if (person.deathYear) {
-                        yearsContent = `Died: ${person.deathYear}`;
-                    }
-                }
-
-                let textContentHeight = (wrappedNameLines.length * nameLineHeight);
-                if (yearsContent) { // Only add yearsLineHeight if there's actual content
-                    textContentHeight += yearsLineHeight;
-                }
-                textContentHeight += 5; // +5 for minor gap
-                
-                let calculatedHeight = textContentHeight;
-                if (person.imageUrl) {
-                    calculatedHeight += imageSize + 10; // Image height + top/bottom padding for image
-                } else {
-                    calculatedHeight += 10; // General top/bottom padding if no image
-                }
-
-                person.actualNodeHeight = Math.max(MIN_NODE_HEIGHT, calculatedHeight);
-            });
-
-
             // 2. Assign Y positions (top of the node aligns with birth year or level)
             // 3. Assign X positions, respecting manually set `person.x` or calculating if `null`.
             const xPositionsByLevel = {}; // Tracks the next available X position for each level if auto-calculating
@@ -1206,10 +1545,10 @@
             function assignXPositions(person) {
                 if (hasYears) {
                     // Original Y position logic for when years are present
-                    person.y = (person.birthYear - minYear) * pixelsPerYear + TOP_PADDING;
+                    person.y = (person.birthYear - minYear) * verticalScaleFactor + TOP_PADDING;
                 } else {
-                    // New Y position logic for when no years are present, based on level
-                    person.y = person.level * VERTICAL_LEVEL_SPACING + TOP_PADDING;
+                    // NEW: Y position logic for when no years, using verticalScaleFactor
+                    person.y = person.level * (verticalScaleFactor * levelSpacingBaseUnit) + TOP_PADDING;
                 }
 
                 if (person.x !== null) {
@@ -1310,7 +1649,7 @@
             // Drawing year lines first (conditional)
             if (showYearLines && hasYears) {
                 for (let year = minYear; year <= maxYear; year += YEAR_LINE_INTERVAL) {
-                    const yPos = (year - minYear) * pixelsPerYear + TOP_PADDING;
+                    const yPos = (year - minYear) * verticalScaleFactor + TOP_PADDING;
                     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
                     line.setAttribute('x1', 0);
                     line.setAttribute('y1', yPos);
@@ -1326,6 +1665,9 @@
                     text.setAttribute('y', textY);
                     text.setAttribute('class', 'year-label');
                     text.textContent = year;
+                    text.style.fill = fontColor; // Apply font color
+                    text.style.fontSize = `${fontSize}px`; // Apply font size
+                    text.style.fontFamily = fontFamily; // Apply font family
                     // Apply inverse rotation around its own position
                     text.setAttribute('transform', `rotate(${-rotationAngle} ${textX} ${textY})`);
                     svg.appendChild(text);
@@ -1350,6 +1692,8 @@
                                 V ${childTopY}`;
                     line.setAttribute('d', path);
                     line.setAttribute('class', 'person-line');
+                    line.style.stroke = lineColor; // Apply line color
+                    line.style.strokeWidth = `${lineThickness}px`; // NEW: Apply line thickness
                     svg.appendChild(line);
                 }
 
@@ -1369,6 +1713,8 @@
                                 V ${childTopY}`;
                     line.setAttribute('d', path);
                     line.setAttribute('class', 'person-line');
+                    line.style.stroke = lineColor; // Apply line color
+                    line.style.strokeWidth = `${lineThickness}px`; // NEW: Apply line thickness
                     svg.appendChild(line);
                 }
             });
@@ -1384,43 +1730,61 @@
                 nodeGroup.onmouseover = (e) => showParentTooltip(e, person.id);
                 nodeGroup.onmouseout = hideParentTooltip;
 
-                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                rect.setAttribute('x', 0);
-                rect.setAttribute('y', 0);
-                rect.setAttribute('width', NODE_WIDTH);
-                rect.setAttribute('height', person.actualNodeHeight); 
-                // Calculate center of rect relative to nodeGroup's origin for rotation
-                const rectCenterX = NODE_WIDTH / 2;
-                const rectCenterY = person.actualNodeHeight / 2;
-                rect.setAttribute('transform', `rotate(${-rotationAngle} ${rectCenterX} ${rectCenterY})`);
-                nodeGroup.appendChild(rect);
+                let nodeElement;
+                let clipPathId = `clip-${person.id}`;
+                const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+                clipPath.setAttribute('id', clipPathId);
 
-                let contentY = 0; // Tracks the current vertical position within the node for placing elements
-
-                if (person.imageUrl) {
-                    const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-                    image.setAttribute('href', person.imageUrl);
-                    const imageX = (NODE_WIDTH - imageSize) / 2; // Center horizontally
-                    const imageY = 5; // A bit of padding at the top
-                    image.setAttribute('x', imageX); 
-                    image.setAttribute('y', imageY); 
-                    image.setAttribute('width', imageSize);
-                    image.setAttribute('height', imageSize);
-                    image.setAttribute('class', 'node-image');
-                    // Calculate center of image relative to nodeGroup's origin for rotation
-                    const imageCenterX = imageX + imageSize / 2;
-                    const imageCenterY = imageY + imageSize / 2;
-                    image.setAttribute('transform', `rotate(${-rotationAngle} ${imageCenterX} ${imageCenterY})`);
-                    nodeGroup.appendChild(image);
-                    contentY = imageY + imageSize + 5; // Update contentY to be below the image + a little padding
+                if (boxShape === 'rectangle') {
+                    nodeElement = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    nodeElement.setAttribute('x', 0);
+                    nodeElement.setAttribute('y', 0);
+                    nodeElement.setAttribute('width', NODE_WIDTH); // Use NODE_WIDTH (which is boxRectWidth)
+                    nodeElement.setAttribute('height', nodeDrawingHeight); // Use nodeDrawingHeight (which is boxRectHeight)
+                    nodeElement.setAttribute('rx', 5); // Rounded corners for rect
+                    nodeElement.setAttribute('ry', 5);
+                    // Add rect to clipPath
+                    const clipRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    clipRect.setAttribute('x', 0);
+                    clipRect.setAttribute('y', 0);
+                    clipRect.setAttribute('width', NODE_WIDTH);
+                    clipRect.setAttribute('height', nodeDrawingHeight);
+                    clipRect.setAttribute('rx', 5);
+                    clipRect.setAttribute('ry', 5);
+                    clipPath.appendChild(clipRect);
+                } else { // Circle shape
+                    nodeElement = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    const radius = NODE_WIDTH / 2; // Radius based on NODE_WIDTH (which is boxRectWidth)
+                    nodeElement.setAttribute('cx', NODE_WIDTH / 2);
+                    nodeElement.setAttribute('cy', nodeDrawingHeight / 2); // Center Y based on nodeDrawingHeight (which is boxRectWidth)
+                    nodeElement.setAttribute('r', radius);
+                    // Add circle to clipPath
+                    const clipCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    clipCircle.setAttribute('cx', NODE_WIDTH / 2);
+                    clipCircle.setAttribute('cy', nodeDrawingHeight / 2);
+                    clipCircle.setAttribute('r', radius);
+                    clipPath.appendChild(clipCircle);
                 }
 
-                const nameFontSize = 12;
-                const yearsFontSize = 12;
+                nodeElement.style.fill = boxColor; // Apply box color
+                nodeElement.style.stroke = boxLineColor; // Apply box line color
+                // Calculate center of node element relative to nodeGroup's origin for rotation
+                const nodeCenterX = NODE_WIDTH / 2;
+                const nodeCenterY = nodeDrawingHeight / 2;
+                nodeElement.setAttribute('transform', `rotate(${-rotationAngle} ${nodeCenterX} ${nodeCenterY})`);
+                nodeGroup.appendChild(nodeElement);
+                svg.appendChild(clipPath); // Append clipPath to SVG directly
+
+                // Calculate content layout within the fixed box
+                const contentWidth = NODE_WIDTH - 20; // 10px padding on each side
+                const contentHeight = nodeDrawingHeight;
+
+                const nameFontSize = fontSize;
+                const yearsFontSize = fontSize;
                 const nameLineHeight = nameFontSize * 1.2;
                 const yearsLineHeight = yearsFontSize * 1.2;
 
-                const wrappedNameLines = getWrappedText(person.name, NODE_WIDTH - 20, nameFontSize); // 20px for horizontal padding
+                const wrappedNameLines = getWrappedText(person.name, contentWidth, nameFontSize);
 
                 let yearsContent = '';
                 if (hasYears) {
@@ -1435,33 +1799,106 @@
                     }
                 }
                 
-                const totalTextHeight = (wrappedNameLines.length * nameLineHeight) + (yearsContent ? yearsLineHeight : 0);
+                let totalTextHeight = (wrappedNameLines.length * nameLineHeight);
+                if (yearsContent) {
+                    totalTextHeight += yearsLineHeight;
+                }
 
-                // Calculate the starting Y for the text block to center it vertically within the remaining space
-                let textBlockStartY = contentY + (person.actualNodeHeight - contentY - totalTextHeight) / 2;
-                if (textBlockStartY < contentY) textBlockStartY = contentY; // Ensure it doesn't go too high
+                let textBlockStartY = (contentHeight - totalTextHeight) / 2;
+                textBlockStartY += verticalTextOffset; // Apply vertical offset
+
+                // Image positioning
+                let imageElement = null;
+                let imageX = 0;
+                let imageY = 0;
+                if (person.imageUrl) {
+                    imageElement = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+                    imageElement.setAttribute('href', person.imageUrl);
+                    imageX = (NODE_WIDTH - imageSize) / 2; 
+                    imageY = (textBlockStartY - imageSize) / 2; 
+                    if (imageY < 0) imageY = 5; 
+                    
+                    imageElement.setAttribute('x', imageX); 
+                    imageElement.setAttribute('y', imageY); 
+                    imageElement.setAttribute('width', imageSize);
+                    imageElement.setAttribute('height', imageSize);
+                    imageElement.setAttribute('class', 'node-image');
+                    imageElement.setAttribute('clip-path', `url(#${clipPathId})`);
+
+                    const imageCenterX = imageX + imageSize / 2;
+                    const imageCenterY = imageY + imageSize / 2;
+                    imageElement.setAttribute('transform', `rotate(${-rotationAngle} ${imageCenterX} ${imageCenterY})`);
+                    nodeGroup.appendChild(imageElement);
+
+                    textBlockStartY = imageY + imageSize + 10; 
+                    if (textBlockStartY + totalTextHeight > contentHeight - 10) { 
+                         textBlockStartY = contentHeight - totalTextHeight - 5; 
+                         if (textBlockStartY < imageY + imageSize) textBlockStartY = imageY + imageSize + 5; 
+                    }
+                }
+
 
                 wrappedNameLines.forEach((lineText, index) => {
                     const nameText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                    const nameTextX = NODE_WIDTH / 2; // Center horizontally
-                    const nameTextY = textBlockStartY + (index * nameLineHeight) + (nameLineHeight / 2); // Vertically center each line
+                    const nameTextWidth = getTextWidth(lineText, nameFontSize, fontFamily);
+                    const nameTextX = NODE_WIDTH / 2 + textHorizontalOffset; // Centered + horizontal offset
+                    const nameTextY = textBlockStartY + (index * nameLineHeight) + (nameLineHeight / 2);
+
+                    // Background rectangle for text
+                    if (fontBackgroundColor !== 'transparent') {
+                        const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                        // Center background rect around textX
+                        bgRect.setAttribute('x', nameTextX - nameTextWidth / 2 - 5); 
+                        bgRect.setAttribute('y', nameTextY - nameLineHeight / 2);
+                        bgRect.setAttribute('width', nameTextWidth + 10); 
+                        bgRect.setAttribute('height', nameLineHeight);
+                        bgRect.style.fill = fontBackgroundColor; // Apply font background color as inline style
+                        bgRect.style.stroke = 'none'; // Ensure no border for font background as inline style
+                        // Apply inverse rotation around the center of the text
+                        bgRect.setAttribute('transform', `rotate(${-rotationAngle} ${nameTextX} ${nameTextY})`);
+                        nodeGroup.appendChild(bgRect);
+                    }
+
                     nameText.setAttribute('x', nameTextX); 
                     nameText.setAttribute('y', nameTextY); 
                     nameText.textContent = lineText;
                     nameText.setAttribute('class', 'name-text'); 
-                    // Calculate center of text line relative to nodeGroup's origin for rotation
+                    nameText.style.fill = fontColor;
+                    nameText.style.fontSize = `${fontSize}px`;
+                    nameText.style.fontFamily = fontFamily;
+                    // Apply inverse rotation around the center of the text
                     nameText.setAttribute('transform', `rotate(${-rotationAngle} ${nameTextX} ${nameTextY})`);
                     nodeGroup.appendChild(nameText);
                 });
 
                 if (yearsContent) {
                     const yearsText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                    const yearsTextX = NODE_WIDTH / 2; // Center horizontally
-                    const yearsTextY = textBlockStartY + (wrappedNameLines.length * nameLineHeight) + (yearsLineHeight / 2); // Position after wrapped names
+                    const yearsTextWidth = getTextWidth(yearsContent, yearsFontSize, fontFamily);
+                    const yearsTextX = NODE_WIDTH / 2 + textHorizontalOffset; // Centered + horizontal offset
+                    const yearsTextY = textBlockStartY + (wrappedNameLines.length * nameLineHeight) + (yearsLineHeight / 2);
+
+                    // Background rectangle for text
+                    if (fontBackgroundColor !== 'transparent') {
+                        const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                        // Center background rect around textX
+                        bgRect.setAttribute('x', yearsTextX - yearsTextWidth / 2 - 5); 
+                        bgRect.setAttribute('y', yearsTextY - yearsLineHeight / 2);
+                        bgRect.setAttribute('width', yearsTextWidth + 10); 
+                        bgRect.setAttribute('height', yearsLineHeight);
+                        bgRect.style.fill = fontBackgroundColor; // Apply font background color as inline style
+                        bgRect.style.stroke = 'none'; // Ensure no border for font background as inline style
+                        // Apply inverse rotation around the center of the text
+                        bgRect.setAttribute('transform', `rotate(${-rotationAngle} ${yearsTextX} ${yearsTextY})`);
+                        nodeGroup.appendChild(bgRect);
+                    }
+
                     yearsText.setAttribute('x', yearsTextX); 
                     yearsText.setAttribute('y', yearsTextY); 
                     yearsText.textContent = yearsContent;
-                    // Calculate center of text line relative to nodeGroup's origin for rotation
+                    yearsText.style.fill = fontColor;
+                    yearsText.style.fontSize = `${fontSize}px`;
+                    yearsText.style.fontFamily = fontFamily;
+                    // Apply inverse rotation around the center of the text
                     yearsText.setAttribute('transform', `rotate(${-rotationAngle} ${yearsTextX} ${yearsTextY})`);
                     nodeGroup.appendChild(yearsText);
                 }
@@ -1476,8 +1913,8 @@
                     let lifelineY1, lifelineY2;
                     if (hasYears) {
                         const currentOrDeathYear = person.deathYear || new Date().getFullYear();
-                        lifelineY1 = (person.birthYear - minYear) * pixelsPerYear + TOP_PADDING;
-                        lifelineY2 = (currentOrDeathYear - minYear) * pixelsPerYear + TOP_PADDING;
+                        lifelineY1 = (person.birthYear - minYear) * verticalScaleFactor + TOP_PADDING;
+                        lifelineY2 = (currentOrDeathYear - minYear) * verticalScaleFactor + TOP_PADDING;
                     } else {
                         // For year-less tree, lifelines just span the node height or fixed length
                         lifelineY1 = person.y;
@@ -1738,15 +2175,65 @@
 
         function closeEditTableModal() {
             document.getElementById('editTableModal').style.display = 'none';
+            selectedTableRow = null;
+            document.getElementById('deleteSelectedRowBtn').disabled = true;
         }
+
+        function selectTableRow(row) {
+            // Deselect previous row
+            if (selectedTableRow) {
+                selectedTableRow.classList.remove('selected-row');
+            }
+            // Select new row
+            selectedTableRow = row;
+            selectedTableRow.classList.add('selected-row');
+            document.getElementById('deleteSelectedRowBtn').disabled = false;
+        }
+
+        function deleteSelectedRow() {
+            if (selectedTableRow) {
+                if (confirm(`Are you sure you want to delete person with ID ${selectedTableRow.dataset.id}?`)) {
+                    selectedTableRow.remove();
+                    selectedTableRow = null;
+                    document.getElementById('deleteSelectedRowBtn').disabled = true;
+                    showMessage('Row deleted from table (will be removed on save).');
+                }
+            } else {
+                alert('Please select a row to delete.');
+            }
+        }
+
+        function insertNewRow() {
+            const tbody = document.getElementById('familyDataTable').querySelector('tbody');
+            const row = tbody.insertRow();
+            const tempId = generateTmpId(); // Use a temporary ID for new rows
+            row.dataset.id = tempId;
+            row.onclick = () => selectTableRow(row);
+
+            row.insertCell().textContent = tempId; // ID column (not editable, placeholder)
+            row.insertCell().innerHTML = `<div contenteditable="true" data-field="name">New Person</div>`;
+            row.insertCell().innerHTML = `<div contenteditable="true" data-field="birthYear"></div>`;
+            row.insertCell().innerHTML = `<div contenteditable="true" data-field="deathYear"></div>`;
+            row.insertCell().innerHTML = `<div contenteditable="true" data-field="parent1Id"></div>`;
+            row.insertCell().innerHTML = `<div contenteditable="true" data-field="parent2Id"></div>`;
+            row.insertCell().innerHTML = `<div contenteditable="true" data-field="imageUrl"></div>`;
+            row.insertCell().innerHTML = `<div contenteditable="true" data-field="x"></div>`;
+            
+            showMessage('New row inserted. Remember to save changes.');
+            selectTableRow(row); // Automatically select the new row
+        }
+
 
         function populateEditTable() {
             const tbody = document.getElementById('familyDataTable').querySelector('tbody');
             tbody.innerHTML = ''; // Clear existing rows
+            selectedTableRow = null; // Clear any previous selection
+            document.getElementById('deleteSelectedRowBtn').disabled = true;
 
             family.forEach(person => {
                 const row = tbody.insertRow();
                 row.dataset.id = person.id; // Store ID for easy lookup
+                row.onclick = () => selectTableRow(row);
 
                 row.insertCell().textContent = person.id; // ID column (not editable)
                 row.insertCell().innerHTML = `<div contenteditable="true" data-field="name">${person.name}</div>`;
@@ -1762,32 +2249,57 @@
         function saveTableChanges() {
             const tbody = document.getElementById('familyDataTable').querySelector('tbody');
             const newFamilyData = [];
-            let maxIdNum = 0;
+            let currentMaxIdNum = 0;
+            let tempIdMap = new Map(); // Map for temporary ID to new permanent ID
 
-            for (const row of tbody.rows) {
-                const nameDiv = row.querySelector('[data-field="name"]');
-                const birthYearDiv = row.querySelector('[data-field="birthYear"]');
-                const deathYearDiv = row.querySelector('[data-field="deathYear"]');
-                const parent1IdDiv = row.querySelector('[data-field="parent1Id"]');
-                const parent2IdDiv = row.querySelector('[data-field="parent2Id"]');
-                const imageUrlDiv = row.querySelector('[data-field="imageUrl"]');
-                const xDiv = row.querySelector('[data-field="x"]');
+            // First pass: Process existing rows and assign new IDs for temporary ones
+            for (const row of Array.from(tbody.rows)) {
+                if (row.classList.contains('deleted-row')) continue; // Skip deleted rows
 
+                const id = row.dataset.id;
+                let finalId = id;
+
+                // If it's a temporary ID, assign a new permanent one
+                if (id.startsWith('tmp_p')) {
+                    finalId = generateId(); // Use generateId to get the next sequential 'pX' ID
+                    tempIdMap.set(id, finalId); // Map old temp ID to new permanent ID
+                } else {
+                    const num = parseInt(id.substring(1));
+                    if (!isNaN(num)) currentMaxIdNum = Math.max(currentMaxIdNum, num);
+                }
+                
                 const person = {
-                    id: row.dataset.id,
-                    name: nameDiv.textContent.trim(),
-                    birthYear: birthYearDiv.textContent.trim() ? parseInt(birthYearDiv.textContent.trim()) : null,
-                    deathYear: deathYearDiv.textContent.trim() ? parseInt(deathYearDiv.textContent.trim()) : null,
-                    parent1Id: parent1IdDiv.textContent.trim() || null,
-                    parent2Id: parent2IdDiv.textContent.trim() || null,
-                    imageUrl: imageUrlDiv.textContent.trim() || null,
-                    x: xDiv.textContent.trim() ? parseFloat(xDiv.textContent.trim()) : null,
+                    id: finalId,
+                    name: row.querySelector('[data-field="name"]').textContent.trim(),
+                    birthYear: row.querySelector('[data-field="birthYear"]').textContent.trim() ? parseInt(row.querySelector('[data-field="birthYear"]').textContent.trim()) : null,
+                    deathYear: row.querySelector('[data-field="deathYear"]').textContent.trim() ? parseInt(row.querySelector('[data-field="deathYear"]').textContent.trim()) : null,
+                    parent1Id: row.querySelector('[data-field="parent1Id"]').textContent.trim() || null,
+                    parent2Id: row.querySelector('[data-field="parent2Id"]').textContent.trim() || null,
+                    imageUrl: row.querySelector('[data-field="imageUrl"]').textContent.trim() || null,
+                    x: row.querySelector('[data-field="x"]').textContent.trim() ? parseFloat(row.querySelector('[data-field="x"]').textContent.trim()) : null,
                 };
+                newFamilyData.push(person);
+            }
+            
+            // Update nextPersonId based on the highest ID found/generated
+            nextPersonId = currentMaxIdNum + 1;
+            
+            // Second pass: Update parent IDs with new permanent IDs if they referred to temporary ones
+            newFamilyData.forEach(person => {
+                if (person.parent1Id && tempIdMap.has(person.parent1Id)) {
+                    person.parent1Id = tempIdMap.get(person.parent1Id);
+                }
+                if (person.parent2Id && tempIdMap.has(person.parent2Id)) {
+                    person.parent2Id = tempIdMap.get(person.parent2Id);
+                }
+            });
 
-                // Validate inputs
+            // Validate inputs
+            const allIds = new Set(newFamilyData.map(p => p.id));
+            for (const person of newFamilyData) {
                 if (!person.name) {
                     showMessage(`Error: Name cannot be empty for ID ${person.id}.`);
-                    return; // Stop saving if validation fails
+                    return; 
                 }
                 if (person.birthYear !== null && isNaN(person.birthYear)) {
                     showMessage(`Error: Invalid Birth Year for ${person.name} (ID: ${person.id}). Must be a number or empty.`);
@@ -1805,25 +2317,13 @@
                     showMessage(`Error: Invalid X Position for ${person.name} (ID: ${person.id}). Must be a number or empty.`);
                     return;
                 }
-
-                // Update maxIdNum for nextPersonId generation
-                const numId = parseInt(person.id.substring(1));
-                if (!isNaN(numId)) {
-                    maxIdNum = Math.max(maxIdNum, numId);
-                }
-
-                newFamilyData.push(person);
-            }
-
-            // Perform parent ID validation against the *new* set of IDs
-            const allIds = new Set(newFamilyData.map(p => p.id));
-            for (const person of newFamilyData) {
+                // Check parent IDs against *final* set of IDs
                 if (person.parent1Id && !allIds.has(person.parent1Id)) {
-                    showMessage(`Error: Parent 1 ID "${person.parent1Id}" for ${person.name} (ID: ${person.id}) does not exist in the current data.`);
+                    showMessage(`Error: Parent 1 ID "${person.parent1Id}" for ${person.name} (ID: ${person.id}) does not exist.`);
                     return;
                 }
                 if (person.parent2Id && !allIds.has(person.parent2Id)) {
-                    showMessage(`Error: Parent 2 ID "${person.parent2Id}" for ${person.name} (ID: ${person.id}) does not exist in the current data.`);
+                    showMessage(`Error: Parent 2 ID "${person.parent2Id}" for ${person.name} (ID: ${person.id}) does not exist.`);
                     return;
                 }
                  if (person.id === person.parent1Id || person.id === person.parent2Id) {
@@ -1838,7 +2338,6 @@
 
 
             family = newFamilyData;
-            nextPersonId = maxIdNum + 1; // Ensure nextPersonId is correctly updated
             updateParentSelect();
             drawFamilyTree();
             resetFormAndSelection();
@@ -1847,7 +2346,7 @@
         }
 
         function saveAsJpg() {
-            const treeContainer = document.querySelector('.tree-container'); 
+            const treeContainer = document.getElementById('treeContainer'); 
 
             if (!treeContainer || family.length === 0) {
                 alert("No tree to save or SVG element not found.");
@@ -1858,7 +2357,7 @@
             const selectedNode = document.querySelector('.person-node.selected');
             if (selectedNode) selectedNode.classList.remove('selected');
 
-            domtoimage.toJpeg(treeContainer, { quality: 0.95, bgcolor: '#2b2b2b' }) 
+            domtoimage.toJpeg(treeContainer, { quality: 0.95, bgcolor: treeBackgroundColor }) 
                 .then(function (dataUrl) {
                     const link = document.createElement('a');
                     link.download = 'family_tree.jpg';
@@ -1877,13 +2376,185 @@
                     if (selectedNode) selectedNode.classList.add('selected');
                 });
         }
+        
+        // --- Save and Load Settings ---
+        function saveSettings() {
+            const settings = {
+                verticalScaleFactor: verticalScaleFactor, // UPDATED: Save verticalScaleFactor
+                imageSize: imageSize,
+                fontSize: fontSize,
+                fontColor: fontColor,
+                fontBackgroundColor: fontBackgroundColor,
+                fontFamily: fontFamily,
+                boxColor: boxColor,
+                boxLineColor: boxLineColor,
+                lineColor: lineColor,
+                lineThickness: lineThickness, // NEW: Save lineThickness
+                boxRectWidth: boxRectWidth,
+                boxRectHeight: boxRectHeight,
+                boxShape: boxShape,
+                treeBackgroundColor: treeBackgroundColor,
+                verticalTextOffset: verticalTextOffset,
+                textHorizontalOffset: textHorizontalOffset,
+                showLifelines: showLifelines,
+                showYearLines: showYearLines,
+                rotationAngle: rotationAngle,
+                treeScale: treeScale,
+                backgroundImageUrl: backgroundImageUrl,
+                backgroundSize: backgroundSize,
+                backgroundPosX: backgroundPosX,
+                backgroundPosY: backgroundPosY
+            };
+            const jsonString = JSON.stringify(settings, null, 2); // Pretty print JSON
+
+            const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.setAttribute('href', URL.createObjectURL(blob));
+            link.setAttribute('download', 'family_tree_settings.json');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+            showMessage('Settings saved to JSON file!');
+        }
+
+        function handleLoadSettingsFile() {
+            const fileInput = document.getElementById('loadSettingsFileInput');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                showMessage('No settings file selected.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const settings = JSON.parse(e.target.result);
+                    applySettings(settings);
+                    showMessage('Settings loaded from JSON file!');
+                } catch (error) {
+                    console.error('Error parsing settings JSON:', error);
+                    alert('Failed to load settings: Invalid JSON file.');
+                }
+            };
+            reader.readAsText(file);
+            fileInput.value = ''; // Clear the file input
+        }
+
+        function applySettings(settings) {
+            verticalScaleFactor = settings.verticalScaleFactor !== undefined ? settings.verticalScaleFactor : 3; // UPDATED: Load verticalScaleFactor
+            imageSize = settings.imageSize !== undefined ? settings.imageSize : 40;
+            fontSize = settings.fontSize !== undefined ? settings.fontSize : 12;
+            fontColor = settings.fontColor !== undefined ? settings.fontColor : '#f0f0f0';
+            fontBackgroundColor = settings.fontBackgroundColor !== undefined ? settings.fontBackgroundColor : 'transparent';
+            fontFamily = settings.fontFamily !== undefined ? settings.fontFamily : 'Arial, sans-serif';
+            boxColor = settings.boxColor !== undefined ? settings.boxColor : '#444444';
+            boxLineColor = settings.boxLineColor !== undefined ? settings.boxLineColor : '#ffa500';
+            lineColor = settings.lineColor !== undefined ? settings.lineColor : '#ffa500';
+            lineThickness = settings.lineThickness !== undefined ? settings.lineThickness : 2; // NEW: Load lineThickness
+            boxRectWidth = settings.boxRectWidth !== undefined ? settings.boxRectWidth : 180;
+            boxRectHeight = settings.boxRectHeight !== undefined ? settings.boxRectHeight : 180;
+            boxShape = settings.boxShape !== undefined ? settings.boxShape : 'rectangle';
+            treeBackgroundColor = settings.treeBackgroundColor !== undefined ? settings.treeBackgroundColor : '#2b2b2b';
+            verticalTextOffset = settings.verticalTextOffset !== undefined ? settings.verticalTextOffset : 0;
+            textHorizontalOffset = settings.textHorizontalOffset !== undefined ? settings.textHorizontalOffset : 0;
+            showLifelines = settings.showLifelines !== undefined ? settings.showLifelines : false;
+            showYearLines = settings.showYearLines !== undefined ? settings.showYearLines : true;
+            rotationAngle = settings.rotationAngle !== undefined ? settings.rotationAngle : 0;
+            treeScale = settings.treeScale !== undefined ? settings.treeScale : 1.0;
+            backgroundImageUrl = settings.backgroundImageUrl !== undefined ? settings.backgroundImageUrl : null;
+            backgroundSize = settings.backgroundSize !== undefined ? settings.backgroundSize : 100;
+            backgroundPosX = settings.backgroundPosX !== undefined ? settings.backgroundPosX : 0;
+            backgroundPosY = settings.backgroundPosY !== undefined ? settings.backgroundPosY : 0;
+
+            // Update UI controls
+            document.getElementById('verticalDistanceSlider').value = verticalScaleFactor; // UPDATED: Update slider
+            document.getElementById('currentVerticalDistance').textContent = `${verticalScaleFactor.toFixed(1)}x`; // UPDATED: Update label
+            document.getElementById('imageSizeInput').value = imageSize;
+            document.getElementById('currentImageSize').textContent = `${imageSize}px`;
+            document.getElementById('fontSizeSlider').value = fontSize;
+            document.getElementById('currentFontSize').textContent = `${fontSize}px`;
+            document.getElementById('fontColorPicker').value = fontColor;
+            document.getElementById('fontBgColorPicker').value = fontBackgroundColor;
+            // Update the color picker's value to transparent representation if fontBackgroundColor is 'transparent'
+            if (fontBackgroundColor === 'transparent') {
+                document.getElementById('fontBgColorPicker').value = '#00000000';
+            } else {
+                document.getElementById('fontBgColorPicker').value = fontBackgroundColor;
+            }
+            document.getElementById('fontFamilyInput').value = fontFamily;
+            document.getElementById('boxColorPicker').value = boxColor;
+            document.getElementById('boxLineColorPicker').value = boxLineColor;
+            document.getElementById('lineColorPicker').value = lineColor;
+            document.getElementById('lineThicknessSlider').value = lineThickness; // NEW: Update line thickness slider
+            document.getElementById('currentLineThickness').textContent = `${lineThickness.toFixed(1)}px`; // NEW: Update line thickness label
+            document.getElementById('boxRectWidthSlider').value = boxRectWidth;
+            document.getElementById('currentBoxRectWidth').textContent = `${boxRectWidth}px`;
+            document.getElementById('boxRectHeightSlider').value = boxRectHeight;
+            document.getElementById('currentBoxRectHeight').textContent = `${boxRectHeight}px`;
+            document.getElementById('boxShapeSelect').value = boxShape;
+            document.getElementById('treeBgColorPicker').value = treeBackgroundColor;
+            document.getElementById('verticalTextOffsetSlider').value = verticalTextOffset;
+            document.getElementById('currentVerticalTextOffset').textContent = `${verticalTextOffset}px`;
+            document.getElementById('textHorizontalOffsetSlider').value = textHorizontalOffset;
+            document.getElementById('currentTextHorizontalOffset').textContent = `${textHorizontalOffset}px`;
+            document.getElementById('treeScaleSlider').value = treeScale;
+            document.getElementById('currentTreeScale').textContent = `${treeScale.toFixed(1)}x`;
+
+            document.getElementById('bgSizeSlider').value = backgroundSize;
+            document.getElementById('currentBgSize').textContent = `${backgroundSize}%`;
+            document.getElementById('bgPosXSlider').value = backgroundPosX;
+            document.getElementById('currentBgPosX').textContent = `${backgroundPosX}%`;
+            document.getElementById('bgPosYSlider').value = backgroundPosY;
+            document.getElementById('currentBgPosY').textContent = `${backgroundPosY}%`;
+            document.getElementById('removeBgImageBtn').disabled = !backgroundImageUrl;
+
+            // Apply styles and redraw
+            updateBackgroundStyle();
+            document.getElementById('treeContainer').style.backgroundColor = treeBackgroundColor; // Apply background color directly
+            updateTreeScale(); // This will apply rotation too
+            drawFamilyTree();
+            document.getElementById('skinSelect').value = ''; // Reset skin dropdown after applying settings
+        }
+
+        // --- Collapse/Expand Control Sections ---
+        function toggleSection(h3Element) {
+            const controlSection = h3Element.closest('.control-section');
+            if (controlSection) {
+                controlSection.classList.toggle('collapsed');
+            }
+        }
+
+        // --- Default background image loading ---
+        async function loadDefaultBackgroundImage() {
+            try {
+                const response = await fetch('default.jpg');
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        backgroundImageUrl = e.target.result;
+                        updateBackgroundStyle();
+                        document.getElementById('removeBgImageBtn').disabled = false;
+                        showMessage('Default background image loaded.');
+                    };
+                    reader.readAsDataURL(blob);
+                } else {
+                    console.log('default.jpg not found or could not be loaded.');
+                }
+            } catch (error) {
+                console.error('Error loading default.jpg:', error);
+            }
+        }
 
 
         // Initial setup
         document.addEventListener('DOMContentLoaded', () => {
             // Set slider values and update displays
-            document.getElementById('zoomSlider').value = pixelsPerYear;
-            document.getElementById('currentZoom').textContent = `${pixelsPerYear.toFixed(1)}x`;
+            document.getElementById('verticalDistanceSlider').value = verticalScaleFactor; // UPDATED
+            document.getElementById('currentVerticalDistance').textContent = `${verticalScaleFactor.toFixed(1)}x`; // UPDATED
             
             document.getElementById('imageSizeInput').value = imageSize;
             document.getElementById('currentImageSize').textContent = `${imageSize}px`;
@@ -1895,18 +2566,52 @@
             document.getElementById('currentBgPosX').textContent = `${backgroundPosX}%`;
             document.getElementById('bgPosYSlider').value = backgroundPosY;
             document.getElementById('currentBgPosY').textContent = `${backgroundPosY}%`;
-            updateBackgroundStyle(); // Apply initial background settings
+            
+            loadDefaultBackgroundImage(); // Loads default.jpg if exists (and calls updateBackgroundStyle)
 
             // Initialize tree scale slider
             document.getElementById('treeScaleSlider').value = treeScale;
             document.getElementById('currentTreeScale').textContent = `${treeScale.toFixed(1)}x`;
             updateTreeScale(); // Apply initial tree scale
 
-            // Update TOP_PADDING initially
-            TOP_PADDING = imageSize + 10; 
+            // Initialize customization controls
+            document.getElementById('fontSizeSlider').value = fontSize;
+            document.getElementById('currentFontSize').textContent = `${fontSize}px`;
+            document.getElementById('fontColorPicker').value = fontColor;
+            // Update the color picker's value to transparent representation if fontBackgroundColor is 'transparent'
+            if (fontBackgroundColor === 'transparent') {
+                document.getElementById('fontBgColorPicker').value = '#00000000';
+            } else {
+                document.getElementById('fontBgColorPicker').value = fontBackgroundColor;
+            }
+            document.getElementById('fontFamilyInput').value = fontFamily;
+            document.getElementById('verticalTextOffsetSlider').value = verticalTextOffset;
+            document.getElementById('currentVerticalTextOffset').textContent = `${verticalTextOffset}px`;
+            document.getElementById('textHorizontalOffsetSlider').value = textHorizontalOffset;
+            document.getElementById('currentTextHorizontalOffset').textContent = `${textHorizontalOffset}px`;
+            document.getElementById('boxColorPicker').value = boxColor;
+            document.getElementById('boxLineColorPicker').value = boxLineColor;
+            document.getElementById('lineColorPicker').value = lineColor;
+            document.getElementById('lineThicknessSlider').value = lineThickness; // NEW
+            document.getElementById('currentLineThickness').textContent = `${lineThickness.toFixed(1)}px`; // NEW
+            document.getElementById('boxRectWidthSlider').value = boxRectWidth;
+            document.getElementById('currentBoxRectWidth').textContent = `${boxRectWidth}px`;
+            document.getElementById('boxRectHeightSlider').value = boxRectHeight;
+            document.getElementById('currentBoxRectHeight').textContent = `${boxRectHeight}px`;
+            document.getElementById('boxShapeSelect').value = boxShape;
+            document.getElementById('treeBgColorPicker').value = treeBackgroundColor;
+            document.getElementById('treeContainer').style.backgroundColor = treeBackgroundColor;
 
-            resetFormAndSelection(); // Ensure buttons are initially disabled and form is reset
-            drawFamilyTree(); // Draw an empty tree initially or load a default if desired.
+            resetFormAndSelection();
+            drawFamilyTree();
+
+            // Collapse all control sections except the first one on initial load
+            const controlSections = document.querySelectorAll('.control-section');
+            controlSections.forEach((section, index) => {
+                if (index > 0) { // Keep the first section open
+                    section.classList.add('collapsed');
+                }
+            });
         });
     </script>
 </body>
