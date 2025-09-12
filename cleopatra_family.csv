@@ -1,12 +1,12 @@
 "ID","Name","BirthYear","DeathYear","Parent1ID","Parent2ID","ImageURL","XPosition"
-P12,Ptolemy XII Auletes (Father),-117,-51,,,https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Ptolemy_XII_Auletes.jpg/440px-Ptolemy_XII_Auletes.jpg,1617.2740478515625
-C7,Cleopatra VII,-69,-30,P12,,https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Cleopatra_VII_tetradrachm_Syracuse_edit2.jpg/440px-Cleopatra_VII_tetradrachm_Syracuse_edit2.jpg,2065.8176879882812
-JC,Julius Caesar,-100,-44,,,https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Gaius_Julius_Caesar_%28100-44_BC%29.jpg/440px-Gaius_Julius_Caesar_%28100-44_BC%29.jpg,577.4091491699219
-MA,Mark Antony,-83,-30,,,https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Mark_Antony.jpg/440px-Mark_Antony.jpg,1256.4501342773438
-P13,Ptolemy XIII Theos Philopator (Brother/Husband),-61,-47,P12,,https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Ptolemy_XIII_Theos_Philopator.jpg/440px-Ptolemy_XIII_Theos_Philopator.jpg,1655.18701171875
-P14,Ptolemy XIV Philopator (Brother/Husband),-59,-44,P12,,,
-PTL,Arsinoe IV (Sister),-68,-41,P12,,https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Arsinoe_IV.jpg/440px-Arsinoe_IV.jpg,56.88337016105652
-C15,Ptolemy XV Caesarion (Son),-47,-30,C7,JC,https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Cesarion.jpg/440px-Cesarion.jpg,986.5765380859375
-ALX,Alexander Helios (Son),-40,,C7,MA,,447.6202697753906
-CLS,Cleopatra Selene II (Daughter),-40,-5,C7,MA,https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Cleopatra_Selene_II.jpg/440px-Cleopatra_Selene_II.jpg,719.2380676269531
-PTL2,Ptolemy Philadelphus (Son),-36,,C7,MA,,1325.9061279296875
+P12,Ptolemy XII Auletes (Father),-117,-51,,,,423.5801806640625
+C7,Cleopatra VII,-69,-30,P12,,,748.6290820312502
+JC,Julius Caesar,-100,-44,,,,976.5431152915953
+MA,Mark Antony,-83,-30,,,,1168.5721923828125
+P13,Ptolemy XIII Theos Philopator (Brother/Husband),-61,-47,P12,,,530.8712133789063
+P14,Ptolemy XIV Philopator (Brother/Husband),-59,-44,P12,,,313.08030700683594
+PTL,Arsinoe IV (Sister),-68,-41,P12,,,120.23218048095703
+C15,Ptolemy XV Caesarion (Son),-47,-30,C7,JC,,910.9040966796874
+ALX,Alexander Helios (Son),-40,-25,C7,MA,,1367.7117358398436
+CLS,Cleopatra Selene II (Daughter),-40,-5,C7,MA,,1606.6546728515625
+PTL2,Ptolemy Philadelphus (Son),-36,-29,C7,MA,,1139.45150390625
