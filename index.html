@@ -517,7 +517,7 @@
                 <span id="currentVerticalDistance" class="zoom-label">3.0x</span>
                 
                 <label for="imageSizeInput">Image Size:</label>
-                <input type="range" id="imageSizeInput" min="10" max="1000" value="40" step="5" onchange="updateImageSize()" oninput="updateImageSize()">
+                <input type="range" id="imageSizeInput" min="10" max="1000" value="180" step="5" onchange="updateImageSize()" oninput="updateImageSize()">
                 <span id="currentImageSize" class="zoom-label">40px</span>
 
                 <label for="treeScaleSlider">Tree Scale:</label>
@@ -692,8 +692,8 @@
         // Configuration for SVG drawing
         let NODE_WIDTH = 180; // This will be set dynamically based on boxRectWidth
         const levelSpacingBaseUnit = 40; // Base unit for vertical spacing when no years (e.g., 40px per 'level' at 1x verticalScaleFactor)
-        let imageSize = 40; // Initial size for the person's image, now variable
-        let verticalScaleFactor = 8; // Controls vertical distance, formerly pixelsPerYear
+        let imageSize = 180; // Initial size for the person's image, now variable
+        let verticalScaleFactor = 20; // Controls vertical distance, formerly pixelsPerYear
         const YEAR_LINE_INTERVAL = 10; // Every 10 years
         const HORIZONTAL_SPACING = 30; // Horizontal space between nodes at the same approximate year level
         let TOP_PADDING = imageSize + 10; // Space above the earliest year for images and margin (now dynamic)
@@ -742,28 +742,28 @@
                 rotationAngle: 0, treeScale: 1.0, backgroundImageUrl: null, backgroundSize: 100, backgroundPosX: 0, backgroundPosY: 0
             },
             forestGreen: {
-                verticalScaleFactor: 2.5, imageSize: 60, fontSize: 13, fontColor: '#e0ffe0', fontBackgroundColor: '#224422cc',
+                verticalScaleFactor: 12.5, imageSize: 60, fontSize: 13, fontColor: '#e0ffe0', fontBackgroundColor: '#224422cc',
                 fontFamily: 'Georgia, serif', boxColor: '#3a6a3a', boxLineColor: '#aaffaa', lineColor: '#aaffaa', lineThickness: 3,
                 boxRectWidth: 190, boxRectHeight: 90, boxShape: 'rectangle', treeBackgroundColor: '#2b502b',
                 verticalTextOffset: 0, textHorizontalOffset: 0, showLifelines: true, showYearLines: false,
                 rotationAngle: 0, treeScale: 1.0, backgroundImageUrl: null, backgroundSize: 100, backgroundPosX: 0, backgroundPosY: 0
             },
             oceanBlue: {
-                verticalScaleFactor: 3.5, imageSize: 45, fontSize: 12, fontColor: '#e0f2f7', fontBackgroundColor: '#1a4c68cc',
+                verticalScaleFactor: 13.5, imageSize: 45, fontSize: 12, fontColor: '#e0f2f7', fontBackgroundColor: '#1a4c68cc',
                 fontFamily: '"Trebuchet MS", sans-serif', boxColor: '#2a628f', boxLineColor: '#6fcffb', lineColor: '#6fcffb', lineThickness: 2.5,
                 boxRectWidth: 170, boxRectHeight: 110, boxShape: 'rectangle', treeBackgroundColor: '#1d3e53',
                 verticalTextOffset: 0, textHorizontalOffset: 0, showLifelines: true, showYearLines: true,
                 rotationAngle: 0, treeScale: 1.0, backgroundImageUrl: null, backgroundSize: 100, backgroundPosX: 0, backgroundPosY: 0
             },
             vintageSepia: {
-                verticalScaleFactor: 4, imageSize: 55, fontSize: 15, fontColor: '#000000', fontBackgroundColor: '#f8f0e0b3',
+                verticalScaleFactor: 14, imageSize: 55, fontSize: 15, fontColor: '#000000', fontBackgroundColor: '#f8f0e0b3',
                 fontFamily: '"Times New Roman", serif', boxColor: '#d4b79b', boxLineColor: '#8a6e4d', lineColor: '#8a6e4d', lineThickness: 1.5,
                 boxRectWidth: 210, boxRectHeight: 130, boxShape: 'rectangle', treeBackgroundColor: '#f0e6d6',
                 verticalTextOffset: 0, textHorizontalOffset: 0, showLifelines: false, showYearLines: true,
                 rotationAngle: 0, treeScale: 1.0, backgroundImageUrl: null, backgroundSize: 100, backgroundPosX: 0, backgroundPosY: 0
             },
             modernCircles: {
-                verticalScaleFactor: 3, imageSize: 70, fontSize: 16, fontColor: '#ffffff', fontBackgroundColor: '#555555cc',
+                verticalScaleFactor: 13, imageSize: 70, fontSize: 16, fontColor: '#ffffff', fontBackgroundColor: '#555555cc',
                 fontFamily: '"Open Sans", sans-serif', boxColor: '#666666', boxLineColor: '#cc00ff', lineColor: '#cc00ff', lineThickness: 4,
                 boxRectWidth: 150, boxRectHeight: 150, boxShape: 'circle', treeBackgroundColor: '#3a3a3a',
                 verticalTextOffset: 0, textHorizontalOffset: 0, showLifelines: true, showYearLines: false,
